@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "HomeCare",
+    "slug": "homecare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {},
+    "web": {}
+  }
+}

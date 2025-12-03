@@ -14,7 +14,7 @@ import TasksScreen from '../screens/TasksScreen';
 
 export type TaskStackParamList = {
   Tasks: undefined;
-  AddTask: undefined;
+  AddTask: { id?: string } | undefined;
 };
 
 export type ItemsStackParamList = {

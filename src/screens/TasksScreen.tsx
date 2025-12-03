@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
+import { Swipeable } from 'react-native-gesture-handler';
 import { TaskCard } from '../components/TaskCard';
 import { Task } from '../types/models';
 import { TaskStackParamList } from '../navigation/RootNavigator';
@@ -17,12 +18,39 @@ const sortByDueDate = (a: Task, b: Task) => {
 
 const TasksScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<TaskStackParamList>>();
-  const { tasks, toggleTaskCompleted } = useHomeStore();
+  const {
+    tasks,
+    toggleTaskCompleted,
+    removeTask,
+    bulkAddRecommendedTasks,
+    addSeasonalChecklists,
+    region,
+  } = useHomeStore();
   const [selectedRoom, setSelectedRoom] = useState('All');
 
   const handleAddTask = useCallback(() => {
     navigation.navigate('AddTask');
   }, [navigation]);
+
+  const handleBulkAdd = useCallback(() => {
+    const added = bulkAddRecommendedTasks();
+    Alert.alert(
+      added > 0 ? 'Recommendations added' : 'All caught up',
+      added > 0
+        ? `We added ${added} suggested home tasks for you.`
+        : 'Recommended tasks are already in your list.',
+    );
+  }, [bulkAddRecommendedTasks]);
+
+  const handleSeasonalAdd = useCallback(() => {
+    const added = addSeasonalChecklists();
+    Alert.alert(
+      added > 0 ? 'Seasonal checklists' : 'Seasonal tasks up to date',
+      added > 0
+        ? `We added ${added} seasonal tasks tailored for ${region}.`
+        : 'Seasonal tasks for your region already exist.',
+    );
+  }, [addSeasonalChecklists, region]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -51,12 +79,92 @@ const TasksScreen: React.FC = () => {
     return [...list].sort(sortByDueDate);
   }, [selectedRoom, tasks]);
 
-  const renderItem = ({ item }: { item: Task }) => (
-    <TaskCard task={item} onToggle={toggleTaskCompleted} />
-  );
+  const TaskRow: React.FC<{ task: Task }> = ({ task }) => {
+    const swipeRef = React.useRef<Swipeable | null>(null);
+    const closeSwipe = () => swipeRef.current?.close();
+
+    const handleDelete = () => {
+      Alert.alert('Delete task', 'Are you sure you want to delete this task?', [
+        { text: 'Cancel', style: 'cancel', onPress: closeSwipe },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            removeTask(task.id);
+            closeSwipe();
+          },
+        },
+      ]);
+    };
+
+    return (
+      <Swipeable
+        ref={swipeRef}
+        renderLeftActions={() => (
+          <Pressable
+            style={[styles.swipeAction, styles.completeAction]}
+            onPress={() => {
+              toggleTaskCompleted(task.id);
+              closeSwipe();
+            }}
+          >
+            <Text style={styles.swipeText}>Mark {task.isCompleted ? 'open' : 'complete'}</Text>
+          </Pressable>
+        )}
+        renderRightActions={() => (
+          <View style={styles.rightActions}>
+            <Pressable
+              style={[styles.swipeAction, styles.editAction]}
+              onPress={() => {
+                navigation.navigate('AddTask', { id: task.id });
+                closeSwipe();
+              }}
+            >
+              <Text style={styles.swipeText}>Edit</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.swipeAction, styles.deleteAction]}
+              onPress={handleDelete}
+            >
+              <Text style={styles.swipeText}>Delete</Text>
+            </Pressable>
+          </View>
+        )}
+      >
+        <TaskCard
+          task={task}
+          onToggle={(id) => {
+            toggleTaskCompleted(id);
+            closeSwipe();
+          }}
+          onPress={() => {
+            navigation.navigate('AddTask', { id: task.id });
+            closeSwipe();
+          }}
+        />
+      </Swipeable>
+    );
+  };
+
+  const renderItem = ({ item }: { item: Task }) => <TaskRow task={item} />;
 
   return (
     <View style={styles.container}>
+      <View style={styles.actionRow}>
+        <Pressable style={styles.actionCard} onPress={handleBulkAdd}>
+          <Text style={styles.actionTitle}>Add 12 recommended tasks</Text>
+          <Text style={styles.actionDescription}>
+            Quickly seed furnace filters, gutters, and more upkeep tasks.
+          </Text>
+        </Pressable>
+        <Pressable style={styles.actionCard} onPress={handleSeasonalAdd}>
+          <Text style={styles.actionTitle}>Seasonal lists ({region})</Text>
+          <Text style={styles.actionDescription}>
+            Drop in summer, fall prep, and winterizing checklists.
+          </Text>
+        </Pressable>
+      </View>
+
       <View style={styles.filtersRow}>
         {roomFilters.map((room) => {
           const isSelected = room === selectedRoom;
@@ -97,6 +205,30 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  actionCard: {
+    flex: 1,
+    minWidth: 160,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  actionTitle: {
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  actionDescription: {
+    color: colors.muted,
   },
   filterChip: {
     paddingHorizontal: spacing.md,
@@ -156,6 +288,34 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 28,
     lineHeight: 28,
+  },
+  swipeAction: {
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    minWidth: 90,
+  },
+  swipeText: {
+    color: colors.white,
+    fontWeight: '800',
+  },
+  completeAction: {
+    backgroundColor: '#16a34a',
+  },
+  editAction: {
+    backgroundColor: colors.primary,
+  },
+  deleteAction: {
+    backgroundColor: '#dc2626',
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    overflow: 'hidden',
   },
 });
 

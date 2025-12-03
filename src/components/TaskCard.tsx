@@ -24,7 +24,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onPress }) =
       <Text style={styles.meta}>{task.frequency}</Text>
       <View style={styles.footerRow}>
         <Text style={styles.due}>Due {dueLabel}</Text>
-        {task.room && <Text style={styles.room}>{task.room}</Text>}
+        <View style={styles.footerMeta}>
+          {task.photos?.length ? (
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>
+                {`${task.photos.length} photo${task.photos.length > 1 ? 's' : ''}`}
+              </Text>
+            </View>
+          ) : null}
+          {task.room && <Text style={styles.room}>{task.room}</Text>}
+        </View>
       </View>
     </Pressable>
   );
@@ -65,12 +74,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  footerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   due: {
     color: colors.text,
     fontWeight: '600',
   },
   room: {
     color: colors.muted,
+  },
+  pill: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pillText: {
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: typography.small,
   },
   checkbox: {
     width: 24,

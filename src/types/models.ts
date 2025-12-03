@@ -15,6 +15,8 @@ export type Task = {
   dueDate?: string;
   lastCompletedDate?: string;
   isCompleted?: boolean;
+  photos?: string[];
+  seasonalTag?: string;
 };
 
 export type HomeItem = {
@@ -26,6 +28,9 @@ export type HomeItem = {
   warrantyEnd?: string;
   room?: string;
   notes?: string;
+  photos?: string[];
+  receiptPhotos?: string[];
+  warrantyPhotos?: string[];
 };
 
 export const demoTasks: Task[] = [

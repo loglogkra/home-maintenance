@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
@@ -19,15 +19,19 @@ const TasksScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<TaskStackParamList>>();
   const { tasks, toggleTaskCompleted } = useHomeStore();
 
+  const handleAddTask = useCallback(() => {
+    navigation.navigate('AddTask');
+  }, [navigation]);
+
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable style={styles.headerButton} onPress={() => navigation.navigate('AddTask')}>
-          <Text style={styles.headerButtonText}>Add</Text>
+        <Pressable style={styles.headerButton} onPress={handleAddTask}>
+          <Text style={styles.headerButtonText}>＋</Text>
         </Pressable>
       ),
     });
-  }, [navigation]);
+  }, [handleAddTask, navigation]);
 
   const renderItem = ({ item }: { item: Task }) => (
     <TaskCard task={item} onToggle={toggleTaskCompleted} />
@@ -42,7 +46,7 @@ const TasksScreen: React.FC = () => {
         renderItem={renderItem}
         ListEmptyComponent={<Text style={styles.emptyText}>Add your first task to get started.</Text>}
       />
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('AddTask')}>
+      <Pressable style={styles.fab} onPress={handleAddTask}>
         <Text style={styles.fabText}>＋</Text>
       </Pressable>
     </View>

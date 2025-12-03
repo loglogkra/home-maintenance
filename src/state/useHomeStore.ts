@@ -63,7 +63,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         return {
           ...task,
           isCompleted,
-          lastCompletedDate: isCompleted ? dayjs().toISOString() : task.lastCompletedDate,
+          lastCompletedDate: isCompleted ? dayjs().toISOString() : undefined,
         };
       });
       void persistState(updatedTasks, state.items);

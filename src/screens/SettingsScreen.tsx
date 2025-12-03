@@ -1,23 +1,64 @@
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useHomeStore } from '../state/useHomeStore';
 import { colors, spacing, typography } from '../theme/theme';
 
 const SettingsScreen: React.FC = () => {
-  const { resetDemoData, notificationsEnabled, toggleNotifications } = useHomeStore();
+  const {
+    resetDemoData,
+    notificationsEnabled,
+    toggleNotifications,
+    region,
+    setRegion,
+    addSeasonalChecklists,
+  } = useHomeStore();
 
   const handleReset = async () => {
+    await AsyncStorage.clear();
     await resetDemoData();
     Alert.alert('Demo data restored', 'We reset your demo tasks and items.');
   };
 
+  const handleAddSeasonal = () => {
+    const added = addSeasonalChecklists();
+    Alert.alert(
+      added > 0 ? 'Seasonal tasks added' : 'Already added',
+      added > 0
+        ? `We added ${added} seasonal tasks for ${region}.`
+        : 'Seasonal tasks for this region already exist.',
+    );
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Settings</Text>
+      <View style={styles.headingRow}>
+        <Text style={styles.heading}>Settings</Text>
+        <Pressable style={styles.resetPill} onPress={handleReset}>
+          <Text style={styles.resetPillText}>Reset data</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>Region</Text>
-        <Text style={styles.value}>United States</Text>
+        <Text style={styles.value}>Choose the closest climate profile</Text>
+        <View style={styles.regionRow}>
+          {['United States', 'Canada', 'Mild Winter'].map((entry) => {
+            const isSelected = entry === region;
+            return (
+              <Pressable
+                key={entry}
+                style={[styles.chip, isSelected && styles.chipSelected]}
+                onPress={() => setRegion(entry)}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{entry}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Pressable style={[styles.secondaryButton, styles.seasonButton]} onPress={handleAddSeasonal}>
+          <Text style={styles.secondaryText}>Add seasonal tasks for {region}</Text>
+        </Pressable>
       </View>
 
       <View style={styles.card}>
@@ -29,11 +70,6 @@ const SettingsScreen: React.FC = () => {
           <Switch value={notificationsEnabled} onValueChange={toggleNotifications} />
         </View>
       </View>
-
-      <Pressable style={[styles.card, styles.resetButton]} onPress={handleReset}>
-        <Text style={[styles.label, styles.resetText]}>Reset demo data</Text>
-        <Text style={[styles.value, styles.resetText]}>Clear and reseed sample tasks</Text>
-      </Pressable>
 
       <View style={styles.card}>
         <Text style={styles.label}>HomeCare</Text>
@@ -55,6 +91,11 @@ const styles = StyleSheet.create({
     fontSize: typography.heading,
     fontWeight: '800',
     color: colors.text,
+  },
+  headingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
   card: {
@@ -74,17 +115,64 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: spacing.xs,
   },
+  regionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  resetButton: {
+  resetPill: {
     backgroundColor: '#fee2e2',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: 999,
+    borderWidth: 1,
     borderColor: '#fecdd3',
   },
-  resetText: {
+  resetPillText: {
     color: '#b91c1c',
+    fontWeight: '700',
+  },
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chipText: {
+    color: colors.text,
+  },
+  chipTextSelected: {
+    color: colors.white,
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  secondaryText: {
+    textAlign: 'center',
+    color: colors.text,
+    fontWeight: '700',
+  },
+  seasonButton: {
+    alignSelf: 'flex-start',
   },
 });
 

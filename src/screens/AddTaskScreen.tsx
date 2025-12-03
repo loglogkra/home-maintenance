@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import dayjs from 'dayjs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -6,6 +6,7 @@ import { TaskFrequency } from '../types/models';
 import { useHomeStore } from '../state/useHomeStore';
 import { TaskStackParamList } from '../navigation/RootNavigator';
 import { colors, spacing, typography } from '../theme/theme';
+import { PhotoAttachments } from '../components/PhotoAttachments';
 
 type Props = NativeStackScreenProps<TaskStackParamList, 'AddTask'>;
 
@@ -19,18 +20,29 @@ const frequencies: TaskFrequency[] = [
   'Custom',
 ];
 
-const AddTaskScreen: React.FC<Props> = ({ navigation }) => {
-  const { addTask } = useHomeStore();
-  const [name, setName] = useState('');
-  const [frequency, setFrequency] = useState<TaskFrequency>('Monthly');
-  const [room, setRoom] = useState('');
-  const [dueDate, setDueDate] = useState('');
+const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { addTask, updateTask, tasks } = useHomeStore();
+  const editingTask = tasks.find((entry) => entry.id === route.params?.id);
+  const isEditing = Boolean(route.params?.id && editingTask);
+  const [name, setName] = useState(editingTask?.name ?? '');
+  const [frequency, setFrequency] = useState<TaskFrequency | string>(
+    (editingTask?.frequency as TaskFrequency) ?? 'Monthly',
+  );
+  const [room, setRoom] = useState(editingTask?.room ?? '');
+  const [dueDate, setDueDate] = useState(
+    editingTask?.dueDate ? dayjs(editingTask.dueDate).format('YYYY-MM-DD') : '',
+  );
+  const [photos, setPhotos] = useState<string[]>(editingTask?.photos ?? []);
 
   const parsedDueDate = useMemo(() => {
     if (!dueDate) return undefined;
     const parsed = dayjs(dueDate);
     return parsed.isValid() ? parsed.toISOString() : undefined;
   }, [dueDate]);
+
+  useEffect(() => {
+    navigation.setOptions({ title: isEditing ? 'Edit Task' : 'Add Task' });
+  }, [isEditing, navigation]);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -43,6 +55,18 @@ const AddTaskScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    if (isEditing && editingTask) {
+      updateTask(editingTask.id, {
+        name: name.trim(),
+        frequency,
+        room: room.trim() || undefined,
+        dueDate: parsedDueDate ?? editingTask.dueDate,
+        photos,
+      });
+      navigation.goBack();
+      return;
+    }
+
     const newTask = {
       id: Date.now().toString(),
       name: name.trim(),
@@ -50,6 +74,7 @@ const AddTaskScreen: React.FC<Props> = ({ navigation }) => {
       room: room.trim() || undefined,
       dueDate: parsedDueDate,
       isCompleted: false,
+      photos,
     };
 
     addTask(newTask);
@@ -98,8 +123,10 @@ const AddTaskScreen: React.FC<Props> = ({ navigation }) => {
         placeholderTextColor={colors.muted}
       />
 
+      <PhotoAttachments label="Task photos" value={photos} onChange={setPhotos} />
+
       <Pressable style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveText}>Save Task</Text>
+        <Text style={styles.saveText}>{isEditing ? 'Update Task' : 'Save Task'}</Text>
       </Pressable>
     </ScrollView>
   );

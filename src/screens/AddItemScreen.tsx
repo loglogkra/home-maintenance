@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ItemsStackParamList } from '../navigation/RootNavigator';
 import { useHomeStore } from '../state/useHomeStore';
 import { colors, spacing, typography } from '../theme/theme';
+import { PhotoAttachments } from '../components/PhotoAttachments';
 
 type Props = NativeStackScreenProps<ItemsStackParamList, 'AddItem'>;
 
@@ -17,6 +18,9 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
   const [warrantyEnd, setWarrantyEnd] = useState('');
   const [room, setRoom] = useState('');
   const [notes, setNotes] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [receiptPhotos, setReceiptPhotos] = useState<string[]>([]);
+  const [warrantyPhotos, setWarrantyPhotos] = useState<string[]>([]);
 
   const parsedInstallDate = useMemo(() => {
     if (!installDate) return undefined;
@@ -55,6 +59,9 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
       warrantyEnd: parsedWarrantyEnd,
       room: room.trim() || undefined,
       notes: notes.trim() || undefined,
+      photos,
+      receiptPhotos,
+      warrantyPhotos,
     };
 
     addItem(newItem);
@@ -126,6 +133,10 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
         multiline
         placeholderTextColor={colors.muted}
       />
+
+      <PhotoAttachments label="Item photos" value={photos} onChange={setPhotos} />
+      <PhotoAttachments label="Receipts" value={receiptPhotos} onChange={setReceiptPhotos} />
+      <PhotoAttachments label="Warranties" value={warrantyPhotos} onChange={setWarrantyPhotos} />
 
       <Pressable style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveText}>Save Item</Text>

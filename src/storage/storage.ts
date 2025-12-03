@@ -6,6 +6,7 @@ const STORAGE_KEY = 'homecare-data';
 export type PersistedState = {
   tasks: Task[];
   items: HomeItem[];
+  region: string;
 };
 
 export const loadHomeData = async (): Promise<PersistedState | null> => {

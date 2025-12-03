@@ -1,10 +1,11 @@
 import dayjs from 'dayjs';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ItemsStackParamList } from '../navigation/RootNavigator';
 import { useHomeStore } from '../state/useHomeStore';
 import { colors, spacing, typography } from '../theme/theme';
+import { PhotoAttachments } from '../components/PhotoAttachments';
 
 type Props = NativeStackScreenProps<ItemsStackParamList, 'ItemDetail'>;
 
@@ -24,6 +25,9 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
   );
   const [room, setRoom] = useState(item?.room ?? '');
   const [notes, setNotes] = useState(item?.notes ?? '');
+  const [photos, setPhotos] = useState<string[]>(item?.photos ?? []);
+  const [receiptPhotos, setReceiptPhotos] = useState<string[]>(item?.receiptPhotos ?? []);
+  const [warrantyPhotos, setWarrantyPhotos] = useState<string[]>(item?.warrantyPhotos ?? []);
 
   useEffect(() => {
     if (!item) return;
@@ -34,6 +38,9 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
     setWarrantyEnd(item.warrantyEnd ? dayjs(item.warrantyEnd).format('YYYY-MM-DD') : '');
     setRoom(item.room ?? '');
     setNotes(item.notes ?? '');
+    setPhotos(item.photos ?? []);
+    setReceiptPhotos(item.receiptPhotos ?? []);
+    setWarrantyPhotos(item.warrantyPhotos ?? []);
   }, [item]);
 
   const parsedInstallDate = useMemo(() => {
@@ -74,6 +81,9 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
       warrantyEnd: parsedWarrantyEnd,
       room: room.trim() || undefined,
       notes: notes.trim() || undefined,
+      photos,
+      receiptPhotos,
+      warrantyPhotos,
     });
     setIsEditing(false);
   };
@@ -163,6 +173,14 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
             multiline
           />
 
+          <PhotoAttachments label="Item photos" value={photos} onChange={setPhotos} />
+          <PhotoAttachments label="Receipts" value={receiptPhotos} onChange={setReceiptPhotos} />
+          <PhotoAttachments
+            label="Warranties"
+            value={warrantyPhotos}
+            onChange={setWarrantyPhotos}
+          />
+
           <View style={styles.actionsRow}>
             <Pressable style={[styles.actionButton, styles.secondary]} onPress={() => setIsEditing(false)}>
               <Text style={[styles.actionText, styles.secondaryText]}>Cancel</Text>
@@ -184,6 +202,36 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
           )}
           {item.room && <Text style={styles.meta}>Room: {item.room}</Text>}
           {item.notes && <Text style={styles.meta}>Notes: {item.notes}</Text>}
+          {photos.length > 0 && (
+            <View style={styles.galleryBlock}>
+              <Text style={styles.sectionHeading}>Item photos</Text>
+              <View style={styles.galleryRow}>
+                {photos.map((uri) => (
+                  <Image key={uri} source={{ uri }} style={styles.thumbnail} />
+                ))}
+              </View>
+            </View>
+          )}
+          {receiptPhotos.length > 0 && (
+            <View style={styles.galleryBlock}>
+              <Text style={styles.sectionHeading}>Receipts</Text>
+              <View style={styles.galleryRow}>
+                {receiptPhotos.map((uri) => (
+                  <Image key={uri} source={{ uri }} style={styles.thumbnail} />
+                ))}
+              </View>
+            </View>
+          )}
+          {warrantyPhotos.length > 0 && (
+            <View style={styles.galleryBlock}>
+              <Text style={styles.sectionHeading}>Warranties</Text>
+              <View style={styles.galleryRow}>
+                {warrantyPhotos.map((uri) => (
+                  <Image key={uri} source={{ uri }} style={styles.thumbnail} />
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       )}
     </ScrollView>
@@ -213,6 +261,26 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: spacing.sm,
     fontSize: typography.body,
+  },
+  galleryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  galleryBlock: {
+    marginTop: spacing.md,
+  },
+  sectionHeading: {
+    color: colors.text,
+    fontWeight: '700',
+  },
+  thumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   editButton: {
     backgroundColor: colors.primary,

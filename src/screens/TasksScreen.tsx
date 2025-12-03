@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
@@ -18,16 +18,38 @@ const sortByDueDate = (a: Task, b: Task) => {
 const TasksScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<TaskStackParamList>>();
   const { tasks, toggleTaskCompleted } = useHomeStore();
+  const [selectedRoom, setSelectedRoom] = useState('All');
+
+  const handleAddTask = useCallback(() => {
+    navigation.navigate('AddTask');
+  }, [navigation]);
 
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable style={styles.headerButton} onPress={() => navigation.navigate('AddTask')}>
-          <Text style={styles.headerButtonText}>Add</Text>
+        <Pressable style={styles.headerButton} onPress={handleAddTask}>
+          <Text style={styles.headerButtonText}>＋</Text>
         </Pressable>
       ),
     });
-  }, [navigation]);
+  }, [handleAddTask, navigation]);
+
+  const roomFilters = useMemo(() => {
+    const defaults = ['All', 'Kitchen', 'Basement', 'Exterior'];
+    const taskRooms = tasks
+      .map((task) => task.room)
+      .filter((room): room is string => Boolean(room) && room.trim().length > 0);
+    const uniqueRooms = Array.from(new Set([...defaults, ...taskRooms]));
+    return uniqueRooms;
+  }, [tasks]);
+
+  const visibleTasks = useMemo(() => {
+    const list =
+      selectedRoom === 'All'
+        ? tasks
+        : tasks.filter((task) => (task.room ? task.room === selectedRoom : false));
+    return [...list].sort(sortByDueDate);
+  }, [selectedRoom, tasks]);
 
   const renderItem = ({ item }: { item: Task }) => (
     <TaskCard task={item} onToggle={toggleTaskCompleted} />
@@ -35,14 +57,29 @@ const TasksScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.filtersRow}>
+        {roomFilters.map((room) => {
+          const isSelected = room === selectedRoom;
+          return (
+            <Pressable
+              key={room}
+              style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+              onPress={() => setSelectedRoom(room)}
+            >
+              <Text style={[styles.filterText, isSelected && styles.filterTextSelected]}>{room}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <FlatList
         contentContainerStyle={styles.listContent}
-        data={[...tasks].sort(sortByDueDate)}
+        data={visibleTasks}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListEmptyComponent={<Text style={styles.emptyText}>Add your first task to get started.</Text>}
       />
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('AddTask')}>
+      <Pressable style={styles.fab} onPress={handleAddTask}>
         <Text style={styles.fabText}>＋</Text>
       </Pressable>
     </View>
@@ -53,6 +90,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterChipSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterText: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+  filterTextSelected: {
+    color: colors.white,
   },
   listContent: {
     padding: spacing.lg,

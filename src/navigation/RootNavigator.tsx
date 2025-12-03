@@ -6,6 +6,7 @@ import React from 'react';
 import { colors } from '../theme/theme';
 import AddTaskScreen from '../screens/AddTaskScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import AddItemScreen from '../screens/AddItemScreen';
 import ItemDetailScreen from '../screens/ItemDetailScreen';
 import ItemsScreen from '../screens/ItemsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -19,6 +20,7 @@ export type TaskStackParamList = {
 export type ItemsStackParamList = {
   Items: undefined;
   ItemDetail: { id: string };
+  AddItem: undefined;
 };
 
 const Tab = createBottomTabNavigator();
@@ -35,6 +37,7 @@ const TasksStackNavigator = () => (
 const ItemsStackNavigator = () => (
   <ItemStack.Navigator>
     <ItemStack.Screen name="Items" component={ItemsScreen} options={{ title: 'Items' }} />
+    <ItemStack.Screen name="AddItem" component={AddItemScreen} options={{ title: 'Add Item' }} />
     <ItemStack.Screen
       name="ItemDetail"
       component={ItemDetailScreen}

@@ -24,6 +24,21 @@ const persistState = async (tasks: Task[], items: HomeItem[]) => {
   await saveHomeData({ tasks, items });
 };
 
+const getNextDueDate = (task: Task): string | undefined => {
+  const baseDate = dayjs();
+
+  switch (task.frequency) {
+    case 'Monthly':
+      return baseDate.add(1, 'month').toISOString();
+    case 'Quarterly':
+      return baseDate.add(3, 'month').toISOString();
+    case 'Every 6 Months':
+      return baseDate.add(6, 'month').toISOString();
+    default:
+      return undefined;
+  }
+};
+
 export const useHomeStore = create<HomeState>((set, get) => ({
   tasks: [],
   items: [],
@@ -59,11 +74,24 @@ export const useHomeStore = create<HomeState>((set, get) => ({
     set((state) => {
       const updatedTasks = state.tasks.map((task) => {
         if (task.id !== id) return task;
-        const isCompleted = !task.isCompleted;
+        const wasCompleted = Boolean(task.isCompleted);
+        const now = dayjs().toISOString();
+
+        if (!wasCompleted) {
+          const nextDueDate = getNextDueDate(task);
+
+          return {
+            ...task,
+            isCompleted: nextDueDate ? false : true,
+            lastCompletedDate: now,
+            dueDate: nextDueDate ?? task.dueDate,
+          };
+        }
+
         return {
           ...task,
-          isCompleted,
-          lastCompletedDate: isCompleted ? dayjs().toISOString() : task.lastCompletedDate,
+          isCompleted: false,
+          lastCompletedDate: undefined,
         };
       });
       void persistState(updatedTasks, state.items);

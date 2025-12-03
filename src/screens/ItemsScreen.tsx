@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
@@ -27,6 +27,20 @@ const ItemsScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<ItemsStackParamList>>();
   const { items } = useHomeStore();
 
+  const handleAddItem = useCallback(() => {
+    navigation.navigate('AddItem');
+  }, [navigation]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable style={styles.headerButton} onPress={handleAddItem}>
+          <Text style={styles.headerButtonText}>＋</Text>
+        </Pressable>
+      ),
+    });
+  }, [handleAddItem, navigation]);
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -38,6 +52,9 @@ const ItemsScreen: React.FC = () => {
         )}
         ListEmptyComponent={<Text style={styles.emptyText}>Add home items to keep details handy.</Text>}
       />
+      <Pressable style={styles.fab} onPress={handleAddItem}>
+        <Text style={styles.fabText}>＋</Text>
+      </Pressable>
     </View>
   );
 };
@@ -76,6 +93,37 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: 'center',
     marginTop: spacing.xl,
+  },
+  headerButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    marginRight: spacing.sm,
+  },
+  headerButtonText: {
+    color: colors.white,
+    fontWeight: '700',
+  },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.lg,
+    backgroundColor: colors.primary,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  fabText: {
+    color: colors.white,
+    fontSize: 28,
+    lineHeight: 28,
   },
 });
 

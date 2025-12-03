@@ -38,8 +38,13 @@ const AddTaskScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    if (dueDate && !parsedDueDate) {
+      Alert.alert('Invalid date', 'Please enter a due date in the format YYYY-MM-DD.');
+      return;
+    }
+
     const newTask = {
-      id: `task-${Date.now()}`,
+      id: Date.now().toString(),
       name: name.trim(),
       frequency,
       room: room.trim() || undefined,

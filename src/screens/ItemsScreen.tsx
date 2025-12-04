@@ -36,9 +36,15 @@ const ItemCard: React.FC<{ item: HomeItem; onPress: () => void; styles: ReturnTy
 
 const ItemsScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<ItemsStackParamList>>();
-  const { items } = useHomeStore();
+  const { items, activeHomeId, homes } = useHomeStore();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const resolvedHomeId = activeHomeId ?? homes[0]?.id;
+  const visibleItems = useMemo(
+    () => (resolvedHomeId ? items.filter((item) => item.homeId === resolvedHomeId) : items),
+    [items, resolvedHomeId],
+  );
 
   const handleAddItem = useCallback(() => {
     navigation.navigate('AddItem');
@@ -57,12 +63,12 @@ const ItemsScreen: React.FC = () => {
         </Pressable>
       ),
     });
-  }, [handleAddItem, navigation]);
+  }, [handleAddItem, navigation, styles]);
 
   return (
     <View style={styles.container}>
       <FlatList
-        data={items}
+        data={visibleItems}
         contentContainerStyle={styles.listContent}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (

@@ -4,6 +4,7 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, Pressable } from 'react
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ItemsStackParamList } from '../navigation/RootNavigator';
 import { useHomeStore } from '../state/useHomeStore';
+import { defaultHome } from '../types/models';
 import { ThemeColors, spacing, typography } from '../theme/theme';
 import { PhotoAttachments } from '../components/PhotoAttachments';
 import { useAppTheme } from '../theme/ThemeProvider';
@@ -11,7 +12,7 @@ import { useAppTheme } from '../theme/ThemeProvider';
 type Props = NativeStackScreenProps<ItemsStackParamList, 'AddItem'>;
 
 const AddItemScreen: React.FC<Props> = ({ navigation }) => {
-  const { addItem } = useHomeStore();
+  const { addItem, activeHomeId, homes } = useHomeStore();
   const [name, setName] = useState('');
   const [model, setModel] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
@@ -37,6 +38,11 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
     return parsed.isValid() ? parsed.toISOString() : undefined;
   }, [warrantyEnd]);
 
+  const resolvedHomeId = useMemo(
+    () => activeHomeId ?? homes[0]?.id ?? defaultHome.id,
+    [activeHomeId, homes],
+  );
+
   const handleSave = () => {
     if (!name.trim()) {
       Alert.alert('Missing name', 'Please provide a name for the item.');
@@ -55,6 +61,7 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
 
     const newItem = {
       id: Date.now().toString(),
+      homeId: resolvedHomeId,
       name: name.trim(),
       model: model.trim() || undefined,
       serialNumber: serialNumber.trim() || undefined,

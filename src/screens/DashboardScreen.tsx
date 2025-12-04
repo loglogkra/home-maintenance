@@ -10,15 +10,26 @@ import { useAppTheme } from '../theme/ThemeProvider';
 
 const DashboardScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { tasks, toggleTaskCompleted } = useHomeStore();
+  const { tasks, toggleTaskCompleted, activeHomeId, homes } = useHomeStore();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const overdueTasks = tasks.filter(
+  const resolvedHomeId = activeHomeId ?? homes[0]?.id;
+  const activeHome = useMemo(
+    () => homes.find((home) => home.id === resolvedHomeId) ?? homes[0],
+    [homes, resolvedHomeId],
+  );
+
+  const tasksForHome = useMemo(
+    () => (resolvedHomeId ? tasks.filter((task) => task.homeId === resolvedHomeId) : tasks),
+    [resolvedHomeId, tasks],
+  );
+
+  const overdueTasks = tasksForHome.filter(
     (task) => task.dueDate && dayjs(task.dueDate).isBefore(dayjs(), 'day') && !task.isCompleted,
   );
 
-  const upcomingWeekTasks = tasks.filter((task) => {
+  const upcomingWeekTasks = tasksForHome.filter((task) => {
     if (!task.dueDate || task.isCompleted) return false;
     const due = dayjs(task.dueDate);
     return due.isAfter(dayjs().subtract(1, 'day')) && due.isBefore(dayjs().add(7, 'day'));
@@ -26,7 +37,10 @@ const DashboardScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>HomeCare</Text>
+      <View style={styles.headingRow}>
+        <Text style={styles.heading}>HomeCare</Text>
+        {activeHome && <Text style={styles.homeBadge}>{activeHome.name}</Text>}
+      </View>
       <Text style={styles.subheading}>Stay on top of your home upkeep.</Text>
 
       <SectionHeader title="Overdue" />
@@ -82,10 +96,25 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing.lg,
       paddingBottom: spacing.xl,
     },
+    headingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
     heading: {
       fontSize: typography.heading,
       fontWeight: '800',
       color: colors.text,
+    },
+    homeBadge: {
+      backgroundColor: colors.card,
+      borderRadius: 999,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+      fontWeight: '700',
     },
     subheading: {
       color: colors.muted,

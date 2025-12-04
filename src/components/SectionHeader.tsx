@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '../theme/theme';
+import { ThemeColors, spacing, typography } from '../theme/theme';
+import { useAppTheme } from '../theme/ThemeProvider';
 
 type SectionHeaderProps = {
   title: string;
@@ -8,6 +9,9 @@ type SectionHeaderProps = {
 };
 
 export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, action }) => {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
@@ -16,17 +20,18 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, action }) =
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.sm,
-  },
-  title: {
-    fontSize: typography.subheading,
-    fontWeight: '700',
-    color: colors.text,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.sm,
+      paddingHorizontal: spacing.sm,
+    },
+    title: {
+      fontSize: typography.subheading,
+      fontWeight: '700',
+      color: colors.text,
+    },
+  });

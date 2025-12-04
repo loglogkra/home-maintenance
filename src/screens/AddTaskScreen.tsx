@@ -5,8 +5,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { TaskFrequency } from '../types/models';
 import { useHomeStore } from '../state/useHomeStore';
 import { TaskStackParamList } from '../navigation/RootNavigator';
-import { colors, spacing, typography } from '../theme/theme';
+import { ThemeColors, spacing, typography } from '../theme/theme';
 import { PhotoAttachments } from '../components/PhotoAttachments';
+import { useAppTheme } from '../theme/ThemeProvider';
 
 type Props = NativeStackScreenProps<TaskStackParamList, 'AddTask'>;
 
@@ -33,6 +34,8 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
     editingTask?.dueDate ? dayjs(editingTask.dueDate).format('YYYY-MM-DD') : '',
   );
   const [photos, setPhotos] = useState<string[]>(editingTask?.photos ?? []);
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const parsedDueDate = useMemo(() => {
     if (!dueDate) return undefined;
@@ -132,63 +135,65 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  label: {
-    color: colors.text,
-    fontWeight: '700',
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    fontSize: typography.body,
-  },
-  frequencyRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    color: colors.text,
-  },
-  chipTextSelected: {
-    color: colors.white,
-    fontWeight: '700',
-  },
-  saveButton: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.primary,
-    padding: spacing.md,
-    borderRadius: 12,
-  },
-  saveText: {
-    color: colors.white,
-    textAlign: 'center',
-    fontWeight: '700',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.lg,
+    },
+    label: {
+      color: colors.text,
+      fontWeight: '700',
+      marginTop: spacing.md,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      fontSize: typography.body,
+      color: colors.text,
+    },
+    frequencyRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      color: colors.text,
+    },
+    chipTextSelected: {
+      color: colors.white,
+      fontWeight: '700',
+    },
+    saveButton: {
+      marginTop: spacing.xl,
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: 12,
+    },
+    saveText: {
+      color: colors.white,
+      textAlign: 'center',
+      fontWeight: '700',
+    },
+  });
 
 export default AddTaskScreen;

@@ -3,7 +3,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { colors } from '../theme/theme';
 import AddTaskScreen from '../screens/AddTaskScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import AddItemScreen from '../screens/AddItemScreen';
@@ -11,6 +10,7 @@ import ItemDetailScreen from '../screens/ItemDetailScreen';
 import ItemsScreen from '../screens/ItemsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import TasksScreen from '../screens/TasksScreen';
+import { useAppTheme } from '../theme/ThemeProvider';
 
 export type TaskStackParamList = {
   Tasks: undefined;
@@ -47,8 +47,10 @@ const ItemsStackNavigator = () => (
 );
 
 const RootNavigator = () => {
+  const { colors, navigationTheme } = useAppTheme();
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,

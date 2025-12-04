@@ -1,15 +1,18 @@
 import dayjs from 'dayjs';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SectionHeader } from '../components/SectionHeader';
 import { TaskCard } from '../components/TaskCard';
 import { useHomeStore } from '../state/useHomeStore';
-import { colors, spacing, typography } from '../theme/theme';
+import { ThemeColors, spacing, typography } from '../theme/theme';
+import { useAppTheme } from '../theme/ThemeProvider';
 
 const DashboardScreen: React.FC = () => {
   const navigation = useNavigation();
   const { tasks, toggleTaskCompleted } = useHomeStore();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const overdueTasks = tasks.filter(
     (task) => task.dueDate && dayjs(task.dueDate).isBefore(dayjs(), 'day') && !task.isCompleted,
@@ -60,45 +63,46 @@ const DashboardScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  heading: {
-    fontSize: typography.heading,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  subheading: {
-    color: colors.muted,
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  emptyText: {
-    color: colors.muted,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.sm,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    padding: spacing.md,
-    borderRadius: 12,
-  },
-  actionText: {
-    color: colors.white,
-    textAlign: 'center',
-    fontWeight: '700',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xl,
+    },
+    heading: {
+      fontSize: typography.heading,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    subheading: {
+      color: colors.muted,
+      marginTop: spacing.xs,
+      marginBottom: spacing.lg,
+    },
+    emptyText: {
+      color: colors.muted,
+      marginBottom: spacing.md,
+      paddingHorizontal: spacing.sm,
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    actionButton: {
+      flex: 1,
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: 12,
+    },
+    actionText: {
+      color: colors.white,
+      textAlign: 'center',
+      fontWeight: '700',
+    },
+  });
 
 export default DashboardScreen;

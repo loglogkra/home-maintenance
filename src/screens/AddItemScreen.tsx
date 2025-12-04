@@ -4,8 +4,9 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, Pressable } from 'react
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ItemsStackParamList } from '../navigation/RootNavigator';
 import { useHomeStore } from '../state/useHomeStore';
-import { colors, spacing, typography } from '../theme/theme';
+import { ThemeColors, spacing, typography } from '../theme/theme';
 import { PhotoAttachments } from '../components/PhotoAttachments';
+import { useAppTheme } from '../theme/ThemeProvider';
 
 type Props = NativeStackScreenProps<ItemsStackParamList, 'AddItem'>;
 
@@ -21,6 +22,8 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [receiptPhotos, setReceiptPhotos] = useState<string[]>([]);
   const [warrantyPhotos, setWarrantyPhotos] = useState<string[]>([]);
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const parsedInstallDate = useMemo(() => {
     if (!installDate) return undefined;
@@ -145,43 +148,45 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  label: {
-    color: colors.text,
-    fontWeight: '700',
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    fontSize: typography.body,
-  },
-  notes: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  saveButton: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.primary,
-    padding: spacing.md,
-    borderRadius: 12,
-  },
-  saveText: {
-    color: colors.white,
-    textAlign: 'center',
-    fontWeight: '700',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.lg,
+    },
+    label: {
+      color: colors.text,
+      fontWeight: '700',
+      marginTop: spacing.md,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      fontSize: typography.body,
+      color: colors.text,
+    },
+    notes: {
+      minHeight: 100,
+      textAlignVertical: 'top',
+    },
+    saveButton: {
+      marginTop: spacing.xl,
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: 12,
+    },
+    saveText: {
+      color: colors.white,
+      textAlign: 'center',
+      fontWeight: '700',
+    },
+  });
 
 export default AddItemScreen;

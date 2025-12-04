@@ -1,4 +1,22 @@
-export const colors = {
+export type ThemeName = 'light' | 'dark';
+
+export type ThemeColors = {
+  background: string;
+  card: string;
+  primary: string;
+  text: string;
+  muted: string;
+  border: string;
+  white: string;
+  success: string;
+};
+
+export type ThemeDefinition = {
+  name: ThemeName;
+  colors: ThemeColors;
+};
+
+const lightColors: ThemeColors = {
   background: '#f8fafc',
   card: '#f1f5f9',
   primary: '#2563eb',
@@ -8,6 +26,24 @@ export const colors = {
   white: '#ffffff',
   success: '#16a34a',
 };
+
+const darkColors: ThemeColors = {
+  background: '#0b1220',
+  card: '#111827',
+  primary: '#3b82f6',
+  text: '#e2e8f0',
+  muted: '#94a3b8',
+  border: '#1f2937',
+  white: '#f8fafc',
+  success: '#22c55e',
+};
+
+export const themes: Record<ThemeName, ThemeDefinition> = {
+  light: { name: 'light', colors: lightColors },
+  dark: { name: 'dark', colors: darkColors },
+};
+
+export const colors = themes.light.colors;
 
 export const spacing = {
   xs: 4,

@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import { create } from 'zustand';
 import { clearHomeData, loadHomeData, saveHomeData } from '../storage/storage';
 import { HomeItem, Task, demoItems, demoTasks } from '../types/models';
+import { ThemeName } from '../theme/theme';
 
 type HomeState = {
   tasks: Task[];
@@ -9,6 +10,7 @@ type HomeState = {
   notificationsEnabled: boolean;
   isHydrated: boolean;
   region: string;
+  theme: ThemeName;
   loadFromStorage: () => Promise<void>;
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
@@ -22,10 +24,16 @@ type HomeState = {
   addSeasonalChecklists: () => number;
   setRegion: (region: string) => void;
   toggleNotifications: () => void;
+  toggleTheme: () => void;
 };
 
-const persistState = async (tasks: Task[], items: HomeItem[], region: string) => {
-  await saveHomeData({ tasks, items, region });
+const persistState = async (
+  tasks: Task[],
+  items: HomeItem[],
+  region: string,
+  theme: ThemeName,
+) => {
+  await saveHomeData({ tasks, items, region, theme });
 };
 
 const getNextDueDate = (task: Task): string | undefined => {
@@ -48,6 +56,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
   items: [],
   notificationsEnabled: false,
   region: 'United States',
+  theme: 'light',
   isHydrated: false,
   loadFromStorage: async () => {
     const data = await loadHomeData();
@@ -56,18 +65,25 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         tasks: data.tasks,
         items: data.items,
         region: data.region ?? 'United States',
+        theme: data.theme ?? 'light',
         isHydrated: true,
       });
       return;
     }
 
-    set({ tasks: demoTasks, items: demoItems, region: 'United States', isHydrated: true });
-    await persistState(demoTasks, demoItems, 'United States');
+    set({
+      tasks: demoTasks,
+      items: demoItems,
+      region: 'United States',
+      theme: 'light',
+      isHydrated: true,
+    });
+    await persistState(demoTasks, demoItems, 'United States', 'light');
   },
   addTask: (task) => {
     set((state) => {
       const updatedTasks = [...state.tasks, task];
-      void persistState(updatedTasks, state.items, state.region);
+      void persistState(updatedTasks, state.items, state.region, state.theme);
       return { ...state, tasks: updatedTasks };
     });
   },
@@ -76,7 +92,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
       const updatedTasks = state.tasks.map((task) =>
         task.id === id ? { ...task, ...updates } : task,
       );
-      void persistState(updatedTasks, state.items, state.region);
+      void persistState(updatedTasks, state.items, state.region, state.theme);
       return { ...state, tasks: updatedTasks };
     });
   },
@@ -104,21 +120,21 @@ export const useHomeStore = create<HomeState>((set, get) => ({
           lastCompletedDate: undefined,
         };
       });
-      void persistState(updatedTasks, state.items, state.region);
+      void persistState(updatedTasks, state.items, state.region, state.theme);
       return { ...state, tasks: updatedTasks };
     });
   },
   removeTask: (id) => {
     set((state) => {
       const updatedTasks = state.tasks.filter((task) => task.id !== id);
-      void persistState(updatedTasks, state.items, state.region);
+      void persistState(updatedTasks, state.items, state.region, state.theme);
       return { ...state, tasks: updatedTasks };
     });
   },
   addItem: (item) => {
     set((state) => {
       const updatedItems = [...state.items, item];
-      void persistState(state.tasks, updatedItems, state.region);
+      void persistState(state.tasks, updatedItems, state.region, state.theme);
       return { ...state, items: updatedItems };
     });
   },
@@ -127,21 +143,21 @@ export const useHomeStore = create<HomeState>((set, get) => ({
       const updatedItems = state.items.map((item) =>
         item.id === id ? { ...item, ...updates } : item,
       );
-      void persistState(state.tasks, updatedItems, state.region);
+      void persistState(state.tasks, updatedItems, state.region, state.theme);
       return { ...state, items: updatedItems };
     });
   },
   removeItem: (id) => {
     set((state) => {
       const updatedItems = state.items.filter((item) => item.id !== id);
-      void persistState(state.tasks, updatedItems, state.region);
+      void persistState(state.tasks, updatedItems, state.region, state.theme);
       return { ...state, items: updatedItems };
     });
   },
   resetDemoData: async () => {
     await clearHomeData();
-    set({ tasks: demoTasks, items: demoItems, region: 'United States' });
-    await persistState(demoTasks, demoItems, 'United States');
+    set({ tasks: demoTasks, items: demoItems, region: 'United States', theme: 'light' });
+    await persistState(demoTasks, demoItems, 'United States', 'light');
   },
   bulkAddRecommendedTasks: () => {
     const recommended = [
@@ -175,7 +191,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
     set((state) => {
       const updatedTasks = [...state.tasks, ...newTasks];
-      void persistState(updatedTasks, state.items, state.region);
+      void persistState(updatedTasks, state.items, state.region, state.theme);
       return { ...state, tasks: updatedTasks };
     });
     return newTasks.length;
@@ -232,18 +248,25 @@ export const useHomeStore = create<HomeState>((set, get) => ({
       if (filtered.length === 0) return state;
 
       const updatedTasks = [...state.tasks, ...filtered];
-      void persistState(updatedTasks, state.items, state.region);
+      void persistState(updatedTasks, state.items, state.region, state.theme);
       return { ...state, tasks: updatedTasks };
     });
     return added;
   },
   setRegion: (region) => {
     set((state) => {
-      void persistState(state.tasks, state.items, region);
+      void persistState(state.tasks, state.items, region, state.theme);
       return { ...state, region };
     });
   },
   toggleNotifications: () => {
     set((state) => ({ ...state, notificationsEnabled: !state.notificationsEnabled }));
+  },
+  toggleTheme: () => {
+    set((state) => {
+      const theme = state.theme === 'light' ? 'dark' : 'light';
+      void persistState(state.tasks, state.items, state.region, theme);
+      return { ...state, theme };
+    });
   },
 }));

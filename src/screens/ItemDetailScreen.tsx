@@ -4,8 +4,9 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ItemsStackParamList } from '../navigation/RootNavigator';
 import { useHomeStore } from '../state/useHomeStore';
-import { colors, spacing, typography } from '../theme/theme';
+import { ThemeColors, spacing, typography } from '../theme/theme';
 import { PhotoAttachments } from '../components/PhotoAttachments';
+import { useAppTheme } from '../theme/ThemeProvider';
 
 type Props = NativeStackScreenProps<ItemsStackParamList, 'ItemDetail'>;
 
@@ -28,6 +29,8 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
   const [photos, setPhotos] = useState<string[]>(item?.photos ?? []);
   const [receiptPhotos, setReceiptPhotos] = useState<string[]>(item?.receiptPhotos ?? []);
   const [warrantyPhotos, setWarrantyPhotos] = useState<string[]>(item?.warrantyPhotos ?? []);
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     if (!item) return;
@@ -238,102 +241,103 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  heading: {
-    fontSize: typography.heading,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  meta: {
-    color: colors.muted,
-    marginTop: spacing.sm,
-    fontSize: typography.body,
-  },
-  galleryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  galleryBlock: {
-    marginTop: spacing.md,
-  },
-  sectionHeading: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  thumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  editButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 10,
-  },
-  editText: {
-    color: colors.white,
-    fontWeight: '700',
-  },
-  label: {
-    color: colors.text,
-    fontWeight: '700',
-    marginTop: spacing.lg,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    fontSize: typography.body,
-  },
-  notes: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    padding: spacing.md,
-    borderRadius: 12,
-  },
-  actionText: {
-    color: colors.white,
-    textAlign: 'center',
-    fontWeight: '700',
-  },
-  secondary: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  secondaryText: {
-    color: colors.text,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.lg,
+    },
+    heading: {
+      fontSize: typography.heading,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    meta: {
+      color: colors.muted,
+      marginTop: spacing.sm,
+      fontSize: typography.body,
+    },
+    galleryRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    galleryBlock: {
+      marginTop: spacing.md,
+    },
+    sectionHeading: {
+      color: colors.text,
+      fontWeight: '700',
+    },
+    thumbnail: {
+      width: 80,
+      height: 80,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    editButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: 10,
+    },
+    editText: {
+      color: colors.white,
+      fontWeight: '700',
+    },
+    label: {
+      color: colors.text,
+      fontWeight: '700',
+      marginTop: spacing.lg,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      fontSize: typography.body,
+    },
+    notes: {
+      minHeight: 100,
+      textAlignVertical: 'top',
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginTop: spacing.xl,
+    },
+    actionButton: {
+      flex: 1,
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: 12,
+    },
+    actionText: {
+      color: colors.white,
+      textAlign: 'center',
+      fontWeight: '700',
+    },
+    secondary: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    secondaryText: {
+      color: colors.text,
+    },
+  });
 
 export default ItemDetailScreen;

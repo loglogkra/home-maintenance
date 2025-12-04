@@ -1,7 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '../theme/theme';
+import { ThemeColors, spacing, typography } from '../theme/theme';
+import { useAppTheme } from '../theme/ThemeProvider';
 
 export type PhotoAttachmentsProps = {
   label: string;
@@ -22,6 +23,9 @@ const requestPermission = async (
 };
 
 export const PhotoAttachments: React.FC<PhotoAttachmentsProps> = ({ label, value, onChange }) => {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const handlePick = useCallback(
     async (mode: 'library' | 'camera') => {
       const permission = await requestPermission(mode === 'camera' ? 'camera' : 'library');
@@ -87,83 +91,84 @@ export const PhotoAttachments: React.FC<PhotoAttachmentsProps> = ({ label, value
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: spacing.lg,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  label: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 10,
-  },
-  primaryText: {
-    color: colors.white,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    backgroundColor: colors.card,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  secondaryText: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  previewRow: {
-    marginTop: spacing.md,
-  },
-  thumbnailWrapper: {
-    marginRight: spacing.sm,
-  },
-  thumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  removeBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  removeText: {
-    color: colors.white,
-    fontSize: typography.subheading,
-    lineHeight: typography.subheading,
-  },
-  helper: {
-    color: colors.muted,
-    marginTop: spacing.sm,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      marginTop: spacing.lg,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    label: {
+      color: colors.text,
+      fontWeight: '700',
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    primaryButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: 10,
+    },
+    primaryText: {
+      color: colors.white,
+      fontWeight: '700',
+    },
+    secondaryButton: {
+      backgroundColor: colors.card,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    secondaryText: {
+      color: colors.text,
+      fontWeight: '700',
+    },
+    previewRow: {
+      marginTop: spacing.md,
+    },
+    thumbnailWrapper: {
+      marginRight: spacing.sm,
+    },
+    thumbnail: {
+      width: 80,
+      height: 80,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    removeBadge: {
+      position: 'absolute',
+      top: -6,
+      right: -6,
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      width: 24,
+      height: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+    },
+    removeText: {
+      color: colors.white,
+      fontSize: typography.subheading,
+      lineHeight: typography.subheading,
+    },
+    helper: {
+      color: colors.muted,
+      marginTop: spacing.sm,
+    },
+  });
 
 export default PhotoAttachments;

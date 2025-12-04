@@ -4,10 +4,11 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
 import { useHomeStore } from './src/state/useHomeStore';
-import { colors } from './src/theme/theme';
+import { ThemeProvider, useAppTheme } from './src/theme/ThemeProvider';
 
-const App = () => {
+const AppContent = () => {
   const { isHydrated, loadFromStorage } = useHomeStore();
+  const { colors } = useAppTheme();
 
   useEffect(() => {
     loadFromStorage();
@@ -25,11 +26,15 @@ const App = () => {
     );
   }
 
-  return (
-    <SafeAreaProvider>
-      <RootNavigator />
-    </SafeAreaProvider>
-  );
+  return <RootNavigator />;
 };
+
+const App = () => (
+  <SafeAreaProvider>
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  </SafeAreaProvider>
+);
 
 export default App;

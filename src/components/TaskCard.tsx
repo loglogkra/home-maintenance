@@ -17,10 +17,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onPress }) =
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <Pressable style={styles.card} onPress={onPress}>
+    <Pressable
+      style={styles.card}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${task.name} task${task.isCompleted ? ', completed' : ''}`}
+      accessibilityHint="Opens task details"
+    >
       <View style={styles.headerRow}>
         <Text style={styles.title}>{task.name}</Text>
-        <Pressable style={styles.checkbox} onPress={() => onToggle?.(task.id)}>
+        <Pressable
+          style={styles.checkbox}
+          onPress={() => onToggle?.(task.id)}
+          accessibilityRole="checkbox"
+          accessibilityLabel={`Mark ${task.name} as ${task.isCompleted ? 'incomplete' : 'complete'}`}
+          accessibilityState={{ checked: task.isCompleted }}
+        >
           <View style={[styles.checkboxInner, task.isCompleted && styles.checkboxChecked]} />
         </Pressable>
       </View>

@@ -58,7 +58,12 @@ const TasksScreen: React.FC = () => {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable style={styles.headerButton} onPress={handleAddTask}>
+        <Pressable
+          style={styles.headerButton}
+          onPress={handleAddTask}
+          accessibilityRole="button"
+          accessibilityLabel="Add a new task"
+        >
           <Text style={styles.headerButtonText}>＋</Text>
         </Pressable>
       ),
@@ -154,13 +159,23 @@ const TasksScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.actionRow}>
-        <Pressable style={styles.actionCard} onPress={handleBulkAdd}>
+        <Pressable
+          style={styles.actionCard}
+          onPress={handleBulkAdd}
+          accessibilityRole="button"
+          accessibilityLabel="Add recommended tasks"
+        >
           <Text style={styles.actionTitle}>Add 12 recommended tasks</Text>
           <Text style={styles.actionDescription}>
             Quickly seed furnace filters, gutters, and more upkeep tasks.
           </Text>
         </Pressable>
-        <Pressable style={styles.actionCard} onPress={handleSeasonalAdd}>
+        <Pressable
+          style={styles.actionCard}
+          onPress={handleSeasonalAdd}
+          accessibilityRole="button"
+          accessibilityLabel={`Add seasonal tasks for ${region}`}
+        >
           <Text style={styles.actionTitle}>Seasonal lists ({region})</Text>
           <Text style={styles.actionDescription}>
             Drop in summer, fall prep, and winterizing checklists.
@@ -176,6 +191,9 @@ const TasksScreen: React.FC = () => {
               key={room}
               style={[styles.filterChip, isSelected && styles.filterChipSelected]}
               onPress={() => setSelectedRoom(room)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={`Filter by ${room}`}
             >
               <Text style={[styles.filterText, isSelected && styles.filterTextSelected]}>{room}</Text>
             </Pressable>
@@ -190,7 +208,12 @@ const TasksScreen: React.FC = () => {
         renderItem={renderItem}
         ListEmptyComponent={<Text style={styles.emptyText}>Add your first task to get started.</Text>}
       />
-      <Pressable style={styles.fab} onPress={handleAddTask}>
+      <Pressable
+        style={styles.fab}
+        onPress={handleAddTask}
+        accessibilityRole="button"
+        accessibilityLabel="Create a task"
+      >
         <Text style={styles.fabText}>＋</Text>
       </Pressable>
     </View>

@@ -93,6 +93,7 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
         onChangeText={setName}
         style={styles.input}
         placeholderTextColor={colors.muted}
+        accessibilityLabel="Task name"
       />
 
       <Text style={styles.label}>Frequency</Text>
@@ -102,6 +103,9 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
             key={item}
             style={[styles.chip, frequency === item && styles.chipSelected]}
             onPress={() => setFrequency(item)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: frequency === item }}
+            accessibilityLabel={`Set frequency to ${item}`}
           >
             <Text style={[styles.chipText, frequency === item && styles.chipTextSelected]}>{item}</Text>
           </Pressable>
@@ -115,6 +119,7 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
         onChangeText={setRoom}
         style={styles.input}
         placeholderTextColor={colors.muted}
+        accessibilityLabel="Room"
       />
 
       <Text style={styles.label}>Due date (YYYY-MM-DD)</Text>
@@ -124,11 +129,17 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
         onChangeText={setDueDate}
         style={styles.input}
         placeholderTextColor={colors.muted}
+        accessibilityLabel="Due date"
       />
 
       <PhotoAttachments label="Task photos" value={photos} onChange={setPhotos} />
 
-      <Pressable style={styles.saveButton} onPress={handleSave}>
+      <Pressable
+        style={styles.saveButton}
+        onPress={handleSave}
+        accessibilityRole="button"
+        accessibilityLabel={isEditing ? 'Update task' : 'Save task'}
+      >
         <Text style={styles.saveText}>{isEditing ? 'Update Task' : 'Save Task'}</Text>
       </Pressable>
     </ScrollView>

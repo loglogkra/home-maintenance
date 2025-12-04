@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import dayjs from 'dayjs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { TaskFrequency } from '../types/models';
+import { TaskFrequency, defaultHome } from '../types/models';
 import { useHomeStore } from '../state/useHomeStore';
 import { TaskStackParamList } from '../navigation/RootNavigator';
 import { ThemeColors, spacing, typography } from '../theme/theme';
@@ -22,7 +22,7 @@ const frequencies: TaskFrequency[] = [
 ];
 
 const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { addTask, updateTask, tasks } = useHomeStore();
+  const { addTask, updateTask, tasks, activeHomeId, homes } = useHomeStore();
   const editingTask = tasks.find((entry) => entry.id === route.params?.id);
   const isEditing = Boolean(route.params?.id && editingTask);
   const [name, setName] = useState(editingTask?.name ?? '');
@@ -42,6 +42,11 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
     const parsed = dayjs(dueDate);
     return parsed.isValid() ? parsed.toISOString() : undefined;
   }, [dueDate]);
+
+  const resolvedHomeId = useMemo(
+    () => activeHomeId ?? homes[0]?.id ?? defaultHome.id,
+    [activeHomeId, homes],
+  );
 
   useEffect(() => {
     navigation.setOptions({ title: isEditing ? 'Edit Task' : 'Add Task' });
@@ -72,6 +77,7 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
 
     const newTask = {
       id: Date.now().toString(),
+      homeId: resolvedHomeId,
       name: name.trim(),
       frequency,
       room: room.trim() || undefined,

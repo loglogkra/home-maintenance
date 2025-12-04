@@ -7,8 +7,16 @@ export type TaskFrequency =
   | 'Yearly'
   | 'Custom';
 
+export type Home = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
 export type Task = {
   id: string;
+  homeId: string;
   name: string;
   frequency: TaskFrequency | string;
   room?: string;
@@ -21,6 +29,7 @@ export type Task = {
 
 export type HomeItem = {
   id: string;
+  homeId: string;
   name: string;
   model?: string;
   serialNumber?: string;
@@ -33,9 +42,16 @@ export type HomeItem = {
   warrantyPhotos?: string[];
 };
 
+export const defaultHome: Home = {
+  id: 'default-home',
+  name: 'My Home',
+  createdAt: new Date().toISOString(),
+};
+
 export const demoTasks: Task[] = [
   {
     id: 'task-1',
+    homeId: defaultHome.id,
     name: 'Replace HVAC filter',
     frequency: 'Every 6 Months',
     room: 'Hallway',
@@ -44,6 +60,7 @@ export const demoTasks: Task[] = [
   },
   {
     id: 'task-2',
+    homeId: defaultHome.id,
     name: 'Test smoke detectors',
     frequency: 'Monthly',
     room: 'Whole Home',
@@ -52,6 +69,7 @@ export const demoTasks: Task[] = [
   },
   {
     id: 'task-3',
+    homeId: defaultHome.id,
     name: 'Clean gutters',
     frequency: 'Quarterly',
     room: 'Exterior',
@@ -63,6 +81,7 @@ export const demoTasks: Task[] = [
 export const demoItems: HomeItem[] = [
   {
     id: 'item-1',
+    homeId: defaultHome.id,
     name: 'Water Heater',
     model: 'Rheem Performance 50 gal',
     serialNumber: 'WH-12345',
@@ -72,6 +91,7 @@ export const demoItems: HomeItem[] = [
   },
   {
     id: 'item-2',
+    homeId: defaultHome.id,
     name: 'Furnace',
     model: 'Carrier Comfort 80',
     serialNumber: 'FUR-98765',
@@ -81,6 +101,7 @@ export const demoItems: HomeItem[] = [
   },
   {
     id: 'item-3',
+    homeId: defaultHome.id,
     name: 'Refrigerator',
     model: 'LG SmartCool',
     serialNumber: 'FR-54321',

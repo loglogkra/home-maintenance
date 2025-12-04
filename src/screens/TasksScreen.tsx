@@ -26,10 +26,18 @@ const TasksScreen: React.FC = () => {
     bulkAddRecommendedTasks,
     addSeasonalChecklists,
     region,
+    activeHomeId,
+    homes,
   } = useHomeStore();
   const [selectedRoom, setSelectedRoom] = useState('All');
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const resolvedHomeId = activeHomeId ?? homes[0]?.id;
+  const tasksForHome = useMemo(
+    () => (resolvedHomeId ? tasks.filter((task) => task.homeId === resolvedHomeId) : tasks),
+    [resolvedHomeId, tasks],
+  );
 
   const handleAddTask = useCallback(() => {
     navigation.navigate('AddTask');
@@ -72,7 +80,7 @@ const TasksScreen: React.FC = () => {
 
   const roomFilters = useMemo(() => {
     const defaults = ['All', 'Kitchen', 'Basement', 'Exterior'];
-    const taskRooms = tasks
+    const taskRooms = tasksForHome
       .map((task) => task.room)
       .filter((room): room is string => Boolean(room) && room.trim().length > 0);
     const uniqueRooms = Array.from(new Set([...defaults, ...taskRooms]));
@@ -82,10 +90,10 @@ const TasksScreen: React.FC = () => {
   const visibleTasks = useMemo(() => {
     const list =
       selectedRoom === 'All'
-        ? tasks
-        : tasks.filter((task) => (task.room ? task.room === selectedRoom : false));
+        ? tasksForHome
+        : tasksForHome.filter((task) => (task.room ? task.room === selectedRoom : false));
     return [...list].sort(sortByDueDate);
-  }, [selectedRoom, tasks]);
+  }, [selectedRoom, tasksForHome]);
 
   const TaskRow: React.FC<{ task: Task }> = ({ task }) => {
     const swipeRef = React.useRef<Swipeable | null>(null);

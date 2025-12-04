@@ -12,9 +12,13 @@ type Props = NativeStackScreenProps<ItemsStackParamList, 'ItemDetail'>;
 
 const ItemDetailScreen: React.FC<Props> = ({ route }) => {
   const { id } = route.params;
-  const { items, updateItem } = useHomeStore();
+  const { items, updateItem, activeHomeId, homes } = useHomeStore();
 
-  const item = items.find((entry) => entry.id === id);
+  const resolvedHomeId = useMemo(() => activeHomeId ?? homes[0]?.id, [activeHomeId, homes]);
+  const item = useMemo(
+    () => items.find((entry) => entry.id === id && (!resolvedHomeId || entry.homeId === resolvedHomeId)),
+    [id, items, resolvedHomeId],
+  );
 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(item?.name ?? '');

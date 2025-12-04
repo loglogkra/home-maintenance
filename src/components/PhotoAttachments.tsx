@@ -62,12 +62,24 @@ export const PhotoAttachments: React.FC<PhotoAttachmentsProps> = ({ label, value
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.label} accessibilityRole="header">
+          {label}
+        </Text>
         <View style={styles.actionsRow}>
-          <Pressable style={styles.secondaryButton} onPress={() => handlePick('library')}>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => handlePick('library')}
+            accessibilityRole="button"
+            accessibilityLabel="Upload a photo from library"
+          >
             <Text style={styles.secondaryText}>Upload</Text>
           </Pressable>
-          <Pressable style={styles.primaryButton} onPress={() => handlePick('camera')}>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => handlePick('camera')}
+            accessibilityRole="button"
+            accessibilityLabel="Take a photo with camera"
+          >
             <Text style={styles.primaryText}>Camera</Text>
           </Pressable>
         </View>
@@ -78,7 +90,12 @@ export const PhotoAttachments: React.FC<PhotoAttachmentsProps> = ({ label, value
           {value.map((uri) => (
             <View key={uri} style={styles.thumbnailWrapper}>
               <Image source={{ uri }} style={styles.thumbnail} />
-              <Pressable style={styles.removeBadge} onPress={() => handleRemove(uri)}>
+              <Pressable
+                style={styles.removeBadge}
+                onPress={() => handleRemove(uri)}
+                accessibilityRole="button"
+                accessibilityLabel="Remove photo"
+              >
                 <Text style={styles.removeText}>×</Text>
               </Pressable>
             </View>

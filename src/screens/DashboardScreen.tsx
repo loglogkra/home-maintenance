@@ -46,16 +46,25 @@ const DashboardScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => navigation.navigate('TasksTab' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="View tasks"
         >
           <Text style={styles.actionText}>Tasks</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => navigation.navigate('ItemsTab' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="View items"
         >
           <Text style={styles.actionText}>Items</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Settings' as never)}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('Settings' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+        >
           <Text style={styles.actionText}>Settings</Text>
         </TouchableOpacity>
       </View>

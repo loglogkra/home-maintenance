@@ -14,7 +14,13 @@ const ItemCard: React.FC<{ item: HomeItem; onPress: () => void; styles: ReturnTy
   onPress,
   styles,
 }) => (
-  <Pressable style={styles.card} onPress={onPress}>
+  <Pressable
+    style={styles.card}
+    onPress={onPress}
+    accessibilityRole="button"
+    accessibilityLabel={`${item.name} details`}
+    accessibilityHint="Opens item details"
+  >
     <Text style={styles.title}>{item.name}</Text>
     {item.model && <Text style={styles.meta}>{item.model}</Text>}
     <View style={styles.row}>
@@ -41,7 +47,12 @@ const ItemsScreen: React.FC = () => {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable style={styles.headerButton} onPress={handleAddItem}>
+        <Pressable
+          style={styles.headerButton}
+          onPress={handleAddItem}
+          accessibilityRole="button"
+          accessibilityLabel="Add a new item"
+        >
           <Text style={styles.headerButtonText}>＋</Text>
         </Pressable>
       ),
@@ -63,7 +74,12 @@ const ItemsScreen: React.FC = () => {
         )}
         ListEmptyComponent={<Text style={styles.emptyText}>Add home items to keep details handy.</Text>}
       />
-      <Pressable style={styles.fab} onPress={handleAddItem}>
+      <Pressable
+        style={styles.fab}
+        onPress={handleAddItem}
+        accessibilityRole="button"
+        accessibilityLabel="Create a home item"
+      >
         <Text style={styles.fabText}>＋</Text>
       </Pressable>
     </View>

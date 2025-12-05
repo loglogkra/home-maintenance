@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Modal, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import dayjs from 'dayjs';
 import { useHomeStore } from '../state/useHomeStore';
+import { useSyncService } from '../state/useSyncService';
 import { ThemeColors, spacing, typography } from '../theme/theme';
 import { useAppTheme } from '../theme/ThemeProvider';
 
@@ -25,6 +26,7 @@ const SettingsScreen: React.FC = () => {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [newHomeName, setNewHomeName] = useState('');
+  const pendingCount = useSyncService((state) => state.pendingQueue.length);
 
   const activeHome = useMemo(
     () => homes.find((home) => home.id === activeHomeId) ?? homes[0],
@@ -121,9 +123,22 @@ const SettingsScreen: React.FC = () => {
             <Text style={styles.heading}>Settings</Text>
             {activeHome && <Text style={styles.value}>Current home: {activeHome.name}</Text>}
           </View>
-          <Pressable style={styles.resetPill} onPress={handleReset}>
-            <Text style={styles.resetPillText}>Reset data</Text>
-          </Pressable>
+          <View style={styles.headingActions}>
+            {pendingCount > 0 && (
+              <View
+                style={styles.pendingBadge}
+                accessible
+                accessibilityLabel={`Pending changes: ${pendingCount}`}
+              >
+                <Text style={styles.pendingBadgeText}>
+                  ⏳ Pending changes: {pendingCount}
+                </Text>
+              </View>
+            )}
+            <Pressable style={styles.resetPill} onPress={handleReset}>
+              <Text style={styles.resetPillText}>Reset data</Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -270,6 +285,10 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
       marginBottom: spacing.lg,
     },
+    headingActions: {
+      gap: spacing.xs,
+      alignItems: 'flex-end',
+    },
     card: {
       backgroundColor: colors.white,
       borderRadius: 12,
@@ -347,6 +366,18 @@ const createStyles = (colors: ThemeColors) =>
     },
     resetPillText: {
       color: '#b91c1c',
+      fontWeight: '700',
+    },
+    pendingBadge: {
+      backgroundColor: colors.card,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pendingBadgeText: {
+      color: colors.text,
       fontWeight: '700',
     },
     chip: {

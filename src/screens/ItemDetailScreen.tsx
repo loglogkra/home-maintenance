@@ -148,7 +148,13 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
       <View style={styles.headerRow}>
         <Text style={styles.heading}>{item.name}</Text>
         {!isEditing && (
-          <Pressable style={styles.editButton} onPress={() => setIsEditing(true)}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit item"
+            accessibilityHint="Edit this item's details"
+            style={styles.editButton}
+            onPress={() => setIsEditing(true)}
+          >
             <Text style={styles.editText}>Edit</Text>
           </Pressable>
         )}
@@ -163,6 +169,7 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
             onChangeText={setName}
             placeholder="Item name"
             placeholderTextColor={colors.muted}
+            accessibilityLabel="Name"
           />
 
           <Text style={styles.label}>Model (optional)</Text>
@@ -172,6 +179,7 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
             onChangeText={setModel}
             placeholder="Model"
             placeholderTextColor={colors.muted}
+            accessibilityLabel="Model"
           />
 
           <Text style={styles.label}>Serial (optional)</Text>
@@ -181,6 +189,7 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
             onChangeText={setSerialNumber}
             placeholder="Serial"
             placeholderTextColor={colors.muted}
+            accessibilityLabel="Serial"
           />
 
           <Text style={styles.label}>Install date (YYYY-MM-DD)</Text>
@@ -190,6 +199,7 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
             onChangeText={setInstallDate}
             placeholder={dayjs().format('YYYY-MM-DD')}
             placeholderTextColor={colors.muted}
+            accessibilityLabel="Install date"
           />
 
           <Text style={styles.label}>Warranty end date (YYYY-MM-DD)</Text>
@@ -199,6 +209,7 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
             onChangeText={setWarrantyEnd}
             placeholder={dayjs().add(1, 'year').format('YYYY-MM-DD')}
             placeholderTextColor={colors.muted}
+            accessibilityLabel="Warranty end date"
           />
 
           <Text style={styles.label}>Room</Text>
@@ -208,6 +219,7 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
             onChangeText={setRoom}
             placeholder="Basement"
             placeholderTextColor={colors.muted}
+            accessibilityLabel="Room"
           />
 
           <Text style={styles.label}>Notes</Text>
@@ -218,6 +230,7 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
             placeholder="Maintenance notes"
             placeholderTextColor={colors.muted}
             multiline
+            accessibilityLabel="Notes"
           />
 
           <PhotoAttachments
@@ -237,10 +250,22 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
           />
 
           <View style={styles.actionsRow}>
-            <Pressable style={[styles.actionButton, styles.secondary]} onPress={() => setIsEditing(false)}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+              accessibilityHint="Discard changes and return to item details"
+              style={[styles.actionButton, styles.secondary]}
+              onPress={() => setIsEditing(false)}
+            >
               <Text style={[styles.actionText, styles.secondaryText]}>Cancel</Text>
             </Pressable>
-            <Pressable style={styles.actionButton} onPress={handleSave}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Save"
+              accessibilityHint="Save your changes to this item"
+              style={styles.actionButton}
+              onPress={handleSave}
+            >
               <Text style={styles.actionText}>Save</Text>
             </Pressable>
           </View>

@@ -1,7 +1,9 @@
 import dayjs from 'dayjs';
 import { create } from 'zustand';
 import { clearHomeData, loadHomeData, saveHomeData } from '../storage/storage';
+import { trackItemChange, trackTaskChange, runLocalSync } from './syncService';
 import { Home, HomeItem, Task, defaultHome, demoItems, demoTasks } from '../types/models';
+import { ChangeRecord } from '../types/sync';
 import { ThemeName } from '../theme/theme';
 
 type HomeState = {
@@ -13,6 +15,7 @@ type HomeState = {
   isHydrated: boolean;
   region: string;
   theme: ThemeName;
+  pendingSync: ChangeRecord[];
   loadFromStorage: () => Promise<void>;
   createHome: (name: string) => Home;
   setActiveHome: (homeId: string) => void;
@@ -39,10 +42,19 @@ const persistState = async (
   items: HomeItem[],
   region: string,
   theme: ThemeName,
+  pendingSync: ChangeRecord[],
 ) => {
   const hydratedHomes = ensureHomePresence(homes);
   const resolvedActiveHome = activeHomeId ?? hydratedHomes[0]?.id ?? defaultHome.id;
-  await saveHomeData({ homes: hydratedHomes, activeHomeId: resolvedActiveHome, tasks, items, region, theme });
+  await saveHomeData({
+    homes: hydratedHomes,
+    activeHomeId: resolvedActiveHome,
+    tasks,
+    items,
+    region,
+    theme,
+    pendingSync,
+  });
 };
 
 const ensureHomePresence = (homes: Home[]): Home[] => {
@@ -75,6 +87,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
   region: 'United States',
   theme: 'light',
   isHydrated: false,
+  pendingSync: [],
   loadFromStorage: async () => {
     const data = await loadHomeData();
     const defaultCreatedAt = new Date().toISOString();
@@ -92,22 +105,32 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         homeId: item.homeId ?? activeHomeId,
       }));
 
+      const synced = runLocalSync({
+        tasks: normalizedTasks,
+        items: normalizedItems,
+        homes: hydratedHomes,
+        activeHomeId,
+        pendingSync: data.pendingSync ?? [],
+      });
+
       set({
         homes: hydratedHomes,
         activeHomeId,
-        tasks: normalizedTasks,
-        items: normalizedItems,
+        tasks: synced.tasks,
+        items: synced.items,
         region: data.region ?? 'United States',
         theme: data.theme ?? 'light',
+        pendingSync: synced.pendingSync,
         isHydrated: true,
       });
       void persistState(
         hydratedHomes,
         activeHomeId,
-        normalizedTasks,
-        normalizedItems,
+        synced.tasks,
+        synced.items,
         data.region ?? 'United States',
         data.theme ?? 'light',
+        synced.pendingSync,
       );
       // Future backend sync: this is the hydration entry point to fan out to Azure.
       return;
@@ -121,9 +144,10 @@ export const useHomeStore = create<HomeState>((set, get) => ({
       items: demoItems,
       region: 'United States',
       theme: 'light',
+      pendingSync: [],
       isHydrated: true,
     });
-    await persistState([seedHome], seedHome.id, demoTasks, demoItems, 'United States', 'light');
+    await persistState([seedHome], seedHome.id, demoTasks, demoItems, 'United States', 'light', []);
   },
   createHome: (name) => {
     const now = new Date().toISOString();
@@ -135,8 +159,16 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
     set((state) => {
       const homes = [...state.homes, newHome];
-      void persistState(homes, newHome.id, state.tasks, state.items, state.region, state.theme);
-      return { ...state, homes, activeHomeId: newHome.id };
+      void persistState(
+        homes,
+        newHome.id,
+        state.tasks,
+        state.items,
+        state.region,
+        state.theme,
+        state.pendingSync,
+      );
+      return { ...state, homes, activeHomeId: newHome.id, pendingSync: state.pendingSync };
     });
 
     return newHome;
@@ -145,8 +177,23 @@ export const useHomeStore = create<HomeState>((set, get) => ({
     set((state) => {
       const exists = state.homes.some((home) => home.id === homeId);
       if (!exists) return state;
-      void persistState(state.homes, homeId, state.tasks, state.items, state.region, state.theme);
-      return { ...state, activeHomeId: homeId };
+      const synced = runLocalSync({
+        tasks: state.tasks,
+        items: state.items,
+        homes: state.homes,
+        activeHomeId: homeId,
+        pendingSync: state.pendingSync,
+      });
+      void persistState(
+        state.homes,
+        homeId,
+        synced.tasks,
+        synced.items,
+        state.region,
+        state.theme,
+        synced.pendingSync,
+      );
+      return { ...state, activeHomeId: homeId, tasks: synced.tasks, items: synced.items, pendingSync: synced.pendingSync };
     });
   },
   renameHome: (homeId, newName) => {
@@ -154,31 +201,67 @@ export const useHomeStore = create<HomeState>((set, get) => ({
       const homes = state.homes.map((home) =>
         home.id === homeId ? { ...home, name: newName, updatedAt: new Date().toISOString() } : home,
       );
-      void persistState(homes, state.activeHomeId, state.tasks, state.items, state.region, state.theme);
-      return { ...state, homes };
+      void persistState(
+        homes,
+        state.activeHomeId,
+        state.tasks,
+        state.items,
+        state.region,
+        state.theme,
+        state.pendingSync,
+      );
+      return { ...state, homes, pendingSync: state.pendingSync };
     });
   },
   addTask: (task) => {
     set((state) => {
       const homes = ensureHomePresence(state.homes);
       const activeHomeId = state.activeHomeId ?? homes[0]?.id ?? defaultHome.id;
-      const updatedTasks = [...state.tasks, { ...task, homeId: task.homeId ?? activeHomeId }];
+      const taskWithHome = { ...task, homeId: task.homeId ?? activeHomeId };
+      const updatedTasks = [...state.tasks, taskWithHome];
       const resolvedActive = state.activeHomeId ?? activeHomeId;
-      void persistState(homes, resolvedActive, updatedTasks, state.items, state.region, state.theme);
-      return { ...state, homes, tasks: updatedTasks, activeHomeId: resolvedActive };
+      const updatedPendingSync = trackTaskChange(state.pendingSync, 'create', taskWithHome);
+      void persistState(
+        homes,
+        resolvedActive,
+        updatedTasks,
+        state.items,
+        state.region,
+        state.theme,
+        updatedPendingSync,
+      );
+      return {
+        ...state,
+        homes,
+        tasks: updatedTasks,
+        activeHomeId: resolvedActive,
+        pendingSync: updatedPendingSync,
+      };
     });
   },
   updateTask: (id, updates) => {
     set((state) => {
-      const updatedTasks = state.tasks.map((task) =>
-        task.id === id ? { ...task, ...updates } : task,
+      const existingTask = state.tasks.find((task) => task.id === id);
+      if (!existingTask) return state;
+      const updatedTasks = state.tasks.map((task) => (task.id === id ? { ...task, ...updates } : task));
+      const mergedTask = { ...existingTask, ...updates };
+      const updatedPendingSync = trackTaskChange(state.pendingSync, 'update', mergedTask, updates);
+      void persistState(
+        state.homes,
+        state.activeHomeId,
+        updatedTasks,
+        state.items,
+        state.region,
+        state.theme,
+        updatedPendingSync,
       );
-      void persistState(state.homes, state.activeHomeId, updatedTasks, state.items, state.region, state.theme);
-      return { ...state, tasks: updatedTasks };
+      return { ...state, tasks: updatedTasks, pendingSync: updatedPendingSync };
     });
   },
   toggleTaskCompleted: (id) => {
     set((state) => {
+      const targetTask = state.tasks.find((task) => task.id === id);
+      if (!targetTask) return state;
       const updatedTasks = state.tasks.map((task) => {
         if (task.id !== id) return task;
         const wasCompleted = Boolean(task.isCompleted);
@@ -201,41 +284,105 @@ export const useHomeStore = create<HomeState>((set, get) => ({
           lastCompletedDate: undefined,
         };
       });
-      void persistState(state.homes, state.activeHomeId, updatedTasks, state.items, state.region, state.theme);
-      return { ...state, tasks: updatedTasks };
+      const updatedTask = updatedTasks.find((task) => task.id === id) as Task;
+      const updatedPendingSync = trackTaskChange(state.pendingSync, 'toggleComplete', updatedTask, {
+        isCompleted: updatedTask.isCompleted,
+        lastCompletedDate: updatedTask.lastCompletedDate,
+        dueDate: updatedTask.dueDate,
+      });
+      void persistState(
+        state.homes,
+        state.activeHomeId,
+        updatedTasks,
+        state.items,
+        state.region,
+        state.theme,
+        updatedPendingSync,
+      );
+      return { ...state, tasks: updatedTasks, pendingSync: updatedPendingSync };
     });
   },
   removeTask: (id) => {
     set((state) => {
+      const targetTask = state.tasks.find((task) => task.id === id);
       const updatedTasks = state.tasks.filter((task) => task.id !== id);
-      void persistState(state.homes, state.activeHomeId, updatedTasks, state.items, state.region, state.theme);
-      return { ...state, tasks: updatedTasks };
+      const updatedPendingSync = targetTask
+        ? trackTaskChange(state.pendingSync, 'delete', targetTask, { id })
+        : state.pendingSync;
+      void persistState(
+        state.homes,
+        state.activeHomeId,
+        updatedTasks,
+        state.items,
+        state.region,
+        state.theme,
+        updatedPendingSync,
+      );
+      return { ...state, tasks: updatedTasks, pendingSync: updatedPendingSync };
     });
   },
   addItem: (item) => {
     set((state) => {
       const homes = ensureHomePresence(state.homes);
       const activeHomeId = state.activeHomeId ?? homes[0]?.id ?? defaultHome.id;
-      const updatedItems = [...state.items, { ...item, homeId: item.homeId ?? activeHomeId }];
+      const itemWithHome = { ...item, homeId: item.homeId ?? activeHomeId };
+      const updatedItems = [...state.items, itemWithHome];
       const resolvedActive = state.activeHomeId ?? activeHomeId;
-      void persistState(homes, resolvedActive, state.tasks, updatedItems, state.region, state.theme);
-      return { ...state, homes, items: updatedItems, activeHomeId: resolvedActive };
+      const updatedPendingSync = trackItemChange(state.pendingSync, 'create', itemWithHome);
+      void persistState(
+        homes,
+        resolvedActive,
+        state.tasks,
+        updatedItems,
+        state.region,
+        state.theme,
+        updatedPendingSync,
+      );
+      return {
+        ...state,
+        homes,
+        items: updatedItems,
+        activeHomeId: resolvedActive,
+        pendingSync: updatedPendingSync,
+      };
     });
   },
   updateItem: (id, updates) => {
     set((state) => {
-      const updatedItems = state.items.map((item) =>
-        item.id === id ? { ...item, ...updates } : item,
+      const existingItem = state.items.find((item) => item.id === id);
+      if (!existingItem) return state;
+      const updatedItems = state.items.map((item) => (item.id === id ? { ...item, ...updates } : item));
+      const mergedItem = { ...existingItem, ...updates };
+      const updatedPendingSync = trackItemChange(state.pendingSync, 'update', mergedItem, updates);
+      void persistState(
+        state.homes,
+        state.activeHomeId,
+        state.tasks,
+        updatedItems,
+        state.region,
+        state.theme,
+        updatedPendingSync,
       );
-      void persistState(state.homes, state.activeHomeId, state.tasks, updatedItems, state.region, state.theme);
-      return { ...state, items: updatedItems };
+      return { ...state, items: updatedItems, pendingSync: updatedPendingSync };
     });
   },
   removeItem: (id) => {
     set((state) => {
+      const targetItem = state.items.find((item) => item.id === id);
       const updatedItems = state.items.filter((item) => item.id !== id);
-      void persistState(state.homes, state.activeHomeId, state.tasks, updatedItems, state.region, state.theme);
-      return { ...state, items: updatedItems };
+      const updatedPendingSync = targetItem
+        ? trackItemChange(state.pendingSync, 'delete', targetItem, { id })
+        : state.pendingSync;
+      void persistState(
+        state.homes,
+        state.activeHomeId,
+        state.tasks,
+        updatedItems,
+        state.region,
+        state.theme,
+        updatedPendingSync,
+      );
+      return { ...state, items: updatedItems, pendingSync: updatedPendingSync };
     });
   },
   resetDemoData: async () => {
@@ -248,8 +395,9 @@ export const useHomeStore = create<HomeState>((set, get) => ({
       items: demoItems,
       region: 'United States',
       theme: 'light',
+      pendingSync: [],
     });
-    await persistState([seededHome], seededHome.id, demoTasks, demoItems, 'United States', 'light');
+    await persistState([seededHome], seededHome.id, demoTasks, demoItems, 'United States', 'light', []);
   },
   bulkAddRecommendedTasks: () => {
     const recommended = [
@@ -285,8 +433,21 @@ export const useHomeStore = create<HomeState>((set, get) => ({
 
     set((state) => {
       const updatedTasks = [...state.tasks, ...newTasks];
-      void persistState(state.homes, state.activeHomeId, updatedTasks, state.items, state.region, state.theme);
-      return { ...state, tasks: updatedTasks, activeHomeId: state.activeHomeId ?? targetHomeId };
+      void persistState(
+        state.homes,
+        state.activeHomeId,
+        updatedTasks,
+        state.items,
+        state.region,
+        state.theme,
+        state.pendingSync,
+      );
+      return {
+        ...state,
+        tasks: updatedTasks,
+        activeHomeId: state.activeHomeId ?? targetHomeId,
+        pendingSync: state.pendingSync,
+      };
     });
     return newTasks.length;
   },
@@ -344,15 +505,36 @@ export const useHomeStore = create<HomeState>((set, get) => ({
       if (filtered.length === 0) return state;
 
       const updatedTasks = [...state.tasks, ...filtered];
-      void persistState(state.homes, state.activeHomeId, updatedTasks, state.items, state.region, state.theme);
-      return { ...state, tasks: updatedTasks, activeHomeId: state.activeHomeId ?? homeId };
+      void persistState(
+        state.homes,
+        state.activeHomeId,
+        updatedTasks,
+        state.items,
+        state.region,
+        state.theme,
+        state.pendingSync,
+      );
+      return {
+        ...state,
+        tasks: updatedTasks,
+        activeHomeId: state.activeHomeId ?? homeId,
+        pendingSync: state.pendingSync,
+      };
     });
     return added;
   },
   setRegion: (region) => {
     set((state) => {
-      void persistState(state.homes, state.activeHomeId, state.tasks, state.items, region, state.theme);
-      return { ...state, region };
+      void persistState(
+        state.homes,
+        state.activeHomeId,
+        state.tasks,
+        state.items,
+        region,
+        state.theme,
+        state.pendingSync,
+      );
+      return { ...state, region, pendingSync: state.pendingSync };
     });
   },
   toggleNotifications: () => {
@@ -361,8 +543,16 @@ export const useHomeStore = create<HomeState>((set, get) => ({
   toggleTheme: () => {
     set((state) => {
       const theme = state.theme === 'light' ? 'dark' : 'light';
-      void persistState(state.homes, state.activeHomeId, state.tasks, state.items, state.region, theme);
-      return { ...state, theme };
+      void persistState(
+        state.homes,
+        state.activeHomeId,
+        state.tasks,
+        state.items,
+        state.region,
+        theme,
+        state.pendingSync,
+      );
+      return { ...state, theme, pendingSync: state.pendingSync };
     });
   },
 }));

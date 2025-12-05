@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Home, HomeItem, Task } from '../types/models';
+import { ChangeRecord } from '../types/sync';
 import { ThemeName } from '../theme/theme';
 
 const STORAGE_KEY = 'homecare-data';
@@ -11,6 +12,7 @@ export type PersistedState = {
   theme?: ThemeName;
   homes?: Home[];
   activeHomeId?: string | null;
+  pendingSync?: ChangeRecord[];
 };
 
 export const loadHomeData = async (): Promise<PersistedState | null> => {

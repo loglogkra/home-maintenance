@@ -1,15 +1,25 @@
 import dayjs from 'dayjs';
-import React, { useMemo } from 'react';
+import React, { useLayoutEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SectionHeader } from '../components/SectionHeader';
 import { TaskCard } from '../components/TaskCard';
+import { DashboardStackParamList, RootTabParamList } from '../navigation/RootNavigator';
 import { useHomeStore } from '../state/useHomeStore';
 import { ThemeColors, spacing, typography } from '../theme/theme';
 import { useAppTheme } from '../theme/ThemeProvider';
 
+type DashboardNavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<DashboardStackParamList, 'DashboardHome'>,
+  BottomTabNavigationProp<RootTabParamList>
+>;
+
 const DashboardScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<DashboardNavigationProp>();
   const { tasks, toggleTaskCompleted, activeHomeId, homes } = useHomeStore();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -35,6 +45,21 @@ const DashboardScreen: React.FC = () => {
     return due.isAfter(dayjs().subtract(1, 'day')) && due.isBefore(dayjs().add(7, 'day'));
   });
 
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Search')}
+          accessibilityRole="button"
+          accessibilityLabel="Search tasks, items, or homes"
+        >
+          <Ionicons name="search" size={22} color={colors.text} />
+        </TouchableOpacity>
+      ),
+      headerTitle: 'Dashboard',
+    });
+  }, [colors.text, navigation]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headingRow}>
@@ -59,7 +84,7 @@ const DashboardScreen: React.FC = () => {
       <View style={styles.actionsRow}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('TasksTab' as never)}
+          onPress={() => navigation.navigate('TasksTab', { screen: 'Tasks' })}
           accessibilityRole="button"
           accessibilityLabel="View tasks"
         >
@@ -67,7 +92,7 @@ const DashboardScreen: React.FC = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('ItemsTab' as never)}
+          onPress={() => navigation.navigate('ItemsTab', { screen: 'Items' })}
           accessibilityRole="button"
           accessibilityLabel="View items"
         >
@@ -75,7 +100,7 @@ const DashboardScreen: React.FC = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('Settings' as never)}
+          onPress={() => navigation.navigate('Settings', { screen: 'SettingsHome' })}
           accessibilityRole="button"
           accessibilityLabel="Open settings"
         >

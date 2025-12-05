@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigatorScreenParams } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
@@ -8,9 +8,15 @@ import DashboardScreen from '../screens/DashboardScreen';
 import AddItemScreen from '../screens/AddItemScreen';
 import ItemDetailScreen from '../screens/ItemDetailScreen';
 import ItemsScreen from '../screens/ItemsScreen';
+import SearchScreen from '../screens/SearchScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import TasksScreen from '../screens/TasksScreen';
 import { useAppTheme } from '../theme/ThemeProvider';
+
+export type DashboardStackParamList = {
+  DashboardHome: undefined;
+  Search: undefined;
+};
 
 export type TaskStackParamList = {
   Tasks: undefined;
@@ -23,9 +29,22 @@ export type ItemsStackParamList = {
   AddItem: undefined;
 };
 
-const Tab = createBottomTabNavigator();
+export type SettingsStackParamList = {
+  SettingsHome: undefined;
+};
+
+export type RootTabParamList = {
+  Dashboard: NavigatorScreenParams<DashboardStackParamList> | undefined;
+  TasksTab: NavigatorScreenParams<TaskStackParamList> | undefined;
+  ItemsTab: NavigatorScreenParams<ItemsStackParamList> | undefined;
+  Settings: NavigatorScreenParams<SettingsStackParamList> | undefined;
+};
+
+const Tab = createBottomTabNavigator<RootTabParamList>();
 const TaskStack = createNativeStackNavigator<TaskStackParamList>();
 const ItemStack = createNativeStackNavigator<ItemsStackParamList>();
+const DashboardStack = createNativeStackNavigator<DashboardStackParamList>();
+const SettingsStack = createNativeStackNavigator<SettingsStackParamList>();
 
 const TasksStackNavigator = () => (
   <TaskStack.Navigator>
@@ -44,6 +63,27 @@ const ItemsStackNavigator = () => (
       options={{ title: 'Item Details' }}
     />
   </ItemStack.Navigator>
+);
+
+const DashboardStackNavigator = () => (
+  <DashboardStack.Navigator>
+    <DashboardStack.Screen
+      name="DashboardHome"
+      component={DashboardScreen}
+      options={{ title: 'Dashboard' }}
+    />
+    <DashboardStack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
+  </DashboardStack.Navigator>
+);
+
+const SettingsStackNavigator = () => (
+  <SettingsStack.Navigator>
+    <SettingsStack.Screen
+      name="SettingsHome"
+      component={SettingsScreen}
+      options={{ title: 'Settings' }}
+    />
+  </SettingsStack.Navigator>
 );
 
 const RootNavigator = () => {
@@ -75,7 +115,7 @@ const RootNavigator = () => {
           },
         })}
       >
-        <Tab.Screen name="Dashboard" component={DashboardScreen} />
+        <Tab.Screen name="Dashboard" component={DashboardStackNavigator} />
         <Tab.Screen
           name="TasksTab"
           component={TasksStackNavigator}
@@ -86,7 +126,7 @@ const RootNavigator = () => {
           component={ItemsStackNavigator}
           options={{ title: 'Items' }}
         />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
+        <Tab.Screen name="Settings" component={SettingsStackNavigator} />
       </Tab.Navigator>
     </NavigationContainer>
   );

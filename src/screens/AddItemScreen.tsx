@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ItemsStackParamList } from '../navigation/RootNavigator';
@@ -8,11 +8,13 @@ import { defaultHome } from '../types/models';
 import { ThemeColors, spacing, typography } from '../theme/theme';
 import { PhotoAttachments } from '../components/PhotoAttachments';
 import { useAppTheme } from '../theme/ThemeProvider';
+import { deletePhoto, listPhotosForEntity, saveLocalPhoto } from '../storage/photoStorage';
 
 type Props = NativeStackScreenProps<ItemsStackParamList, 'AddItem'>;
 
 const AddItemScreen: React.FC<Props> = ({ navigation }) => {
   const { addItem, activeHomeId, homes } = useHomeStore();
+  const [itemId] = useState(Date.now().toString());
   const [name, setName] = useState('');
   const [model, setModel] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
@@ -43,6 +45,39 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
     [activeHomeId, homes],
   );
 
+  useEffect(() => {
+    const loadPhotos = async () => {
+      const [itemPhotos, receiptUris, warrantyUris] = await Promise.all([
+        listPhotosForEntity('item', itemId),
+        listPhotosForEntity('item_receipt', itemId),
+        listPhotosForEntity('item_warranty', itemId),
+      ]);
+
+      if (itemPhotos.length) setPhotos(itemPhotos);
+      if (receiptUris.length) setReceiptPhotos(receiptUris);
+      if (warrantyUris.length) setWarrantyPhotos(warrantyUris);
+    };
+
+    void loadPhotos();
+  }, [itemId]);
+
+  const handlePhotoChange = async (type: 'item' | 'item_receipt' | 'item_warranty', next: string[]) => {
+    const stateMap = {
+      item: { value: photos, setter: setPhotos },
+      item_receipt: { value: receiptPhotos, setter: setReceiptPhotos },
+      item_warranty: { value: warrantyPhotos, setter: setWarrantyPhotos },
+    } as const;
+
+    const { value, setter } = stateMap[type];
+    const added = next.filter((uri) => !value.includes(uri));
+    const removed = value.filter((uri) => !next.includes(uri));
+
+    const storedAdded = await Promise.all(added.map((uri) => saveLocalPhoto(type, itemId, uri)));
+    await Promise.all(removed.map((uri) => deletePhoto(type, itemId, uri)));
+
+    setter([...value.filter((uri) => !removed.includes(uri)), ...storedAdded]);
+  };
+
   const handleSave = () => {
     if (!name.trim()) {
       Alert.alert('Missing name', 'Please provide a name for the item.');
@@ -60,7 +95,7 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     const newItem = {
-      id: Date.now().toString(),
+      id: itemId,
       homeId: resolvedHomeId,
       name: name.trim(),
       model: model.trim() || undefined,
@@ -144,9 +179,21 @@ const AddItemScreen: React.FC<Props> = ({ navigation }) => {
         placeholderTextColor={colors.muted}
       />
 
-      <PhotoAttachments label="Item photos" value={photos} onChange={setPhotos} />
-      <PhotoAttachments label="Receipts" value={receiptPhotos} onChange={setReceiptPhotos} />
-      <PhotoAttachments label="Warranties" value={warrantyPhotos} onChange={setWarrantyPhotos} />
+      <PhotoAttachments
+        label="Item photos"
+        value={photos}
+        onChange={(uris) => handlePhotoChange('item', uris)}
+      />
+      <PhotoAttachments
+        label="Receipts"
+        value={receiptPhotos}
+        onChange={(uris) => handlePhotoChange('item_receipt', uris)}
+      />
+      <PhotoAttachments
+        label="Warranties"
+        value={warrantyPhotos}
+        onChange={(uris) => handlePhotoChange('item_warranty', uris)}
+      />
 
       <Pressable style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveText}>Save Item</Text>

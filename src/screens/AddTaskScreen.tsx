@@ -8,6 +8,7 @@ import { TaskStackParamList } from '../navigation/RootNavigator';
 import { ThemeColors, spacing, typography } from '../theme/theme';
 import { PhotoAttachments } from '../components/PhotoAttachments';
 import { useAppTheme } from '../theme/ThemeProvider';
+import { deletePhoto, listPhotosForEntity, saveLocalPhoto } from '../storage/photoStorage';
 
 type Props = NativeStackScreenProps<TaskStackParamList, 'AddTask'>;
 
@@ -25,6 +26,7 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
   const { addTask, updateTask, tasks, activeHomeId, homes } = useHomeStore();
   const editingTask = tasks.find((entry) => entry.id === route.params?.id);
   const isEditing = Boolean(route.params?.id && editingTask);
+  const [taskId] = useState(editingTask?.id ?? Date.now().toString());
   const [name, setName] = useState(editingTask?.name ?? '');
   const [frequency, setFrequency] = useState<TaskFrequency | string>(
     (editingTask?.frequency as TaskFrequency) ?? 'Monthly',
@@ -52,6 +54,35 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
     navigation.setOptions({ title: isEditing ? 'Edit Task' : 'Add Task' });
   }, [isEditing, navigation]);
 
+  useEffect(() => {
+    if (!taskId) return;
+    const loadPhotos = async () => {
+      const stored = await listPhotosForEntity('task', taskId);
+      if (stored.length > 0) {
+        setPhotos(stored);
+      }
+    };
+    void loadPhotos();
+  }, [taskId]);
+
+  useEffect(() => {
+    if (!editingTask) return;
+    setPhotos((current) => (current.length > 0 ? current : editingTask.photos ?? []));
+  }, [editingTask]);
+
+  const handlePhotosChange = async (next: string[]) => {
+    const current = photos;
+    const added = next.filter((uri) => !current.includes(uri));
+    const removed = current.filter((uri) => !next.includes(uri));
+
+    const storedAdded = await Promise.all(
+      added.map((uri) => saveLocalPhoto('task', taskId, uri)),
+    );
+    await Promise.all(removed.map((uri) => deletePhoto('task', taskId, uri)));
+
+    setPhotos([...current.filter((uri) => !removed.includes(uri)), ...storedAdded]);
+  };
+
   const handleSave = () => {
     if (!name.trim()) {
       Alert.alert('Missing name', 'Please provide a name for the task.');
@@ -76,7 +107,7 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
     }
 
     const newTask = {
-      id: Date.now().toString(),
+      id: taskId,
       homeId: resolvedHomeId,
       name: name.trim(),
       frequency,
@@ -138,7 +169,7 @@ const AddTaskScreen: React.FC<Props> = ({ navigation, route }) => {
         accessibilityLabel="Due date"
       />
 
-      <PhotoAttachments label="Task photos" value={photos} onChange={setPhotos} />
+      <PhotoAttachments label="Task photos" value={photos} onChange={handlePhotosChange} />
 
       <Pressable
         style={styles.saveButton}

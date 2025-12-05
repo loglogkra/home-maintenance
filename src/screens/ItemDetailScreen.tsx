@@ -7,6 +7,7 @@ import { useHomeStore } from '../state/useHomeStore';
 import { ThemeColors, spacing, typography } from '../theme/theme';
 import { PhotoAttachments } from '../components/PhotoAttachments';
 import { useAppTheme } from '../theme/ThemeProvider';
+import { deletePhoto, listPhotosForEntity, saveLocalPhoto } from '../storage/photoStorage';
 
 type Props = NativeStackScreenProps<ItemsStackParamList, 'ItemDetail'>;
 
@@ -48,6 +49,23 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
     setPhotos(item.photos ?? []);
     setReceiptPhotos(item.receiptPhotos ?? []);
     setWarrantyPhotos(item.warrantyPhotos ?? []);
+  }, [item]);
+
+  useEffect(() => {
+    if (!item) return;
+    const loadPhotos = async () => {
+      const [itemPhotos, receipts, warranties] = await Promise.all([
+        listPhotosForEntity('item', item.id),
+        listPhotosForEntity('item_receipt', item.id),
+        listPhotosForEntity('item_warranty', item.id),
+      ]);
+
+      if (itemPhotos.length) setPhotos(itemPhotos);
+      if (receipts.length) setReceiptPhotos(receipts);
+      if (warranties.length) setWarrantyPhotos(warranties);
+    };
+
+    void loadPhotos();
   }, [item]);
 
   const parsedInstallDate = useMemo(() => {
@@ -93,6 +111,28 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
       warrantyPhotos,
     });
     setIsEditing(false);
+  };
+
+  const handlePhotoChange = async (
+    type: 'item' | 'item_receipt' | 'item_warranty',
+    next: string[],
+  ) => {
+    if (!item) return;
+
+    const stateMap = {
+      item: { value: photos, setter: setPhotos },
+      item_receipt: { value: receiptPhotos, setter: setReceiptPhotos },
+      item_warranty: { value: warrantyPhotos, setter: setWarrantyPhotos },
+    } as const;
+
+    const { value, setter } = stateMap[type];
+    const added = next.filter((uri) => !value.includes(uri));
+    const removed = value.filter((uri) => !next.includes(uri));
+
+    const storedAdded = await Promise.all(added.map((uri) => saveLocalPhoto(type, item.id, uri)));
+    await Promise.all(removed.map((uri) => deletePhoto(type, item.id, uri)));
+
+    setter([...value.filter((uri) => !removed.includes(uri)), ...storedAdded]);
   };
 
   if (!item) {
@@ -180,12 +220,20 @@ const ItemDetailScreen: React.FC<Props> = ({ route }) => {
             multiline
           />
 
-          <PhotoAttachments label="Item photos" value={photos} onChange={setPhotos} />
-          <PhotoAttachments label="Receipts" value={receiptPhotos} onChange={setReceiptPhotos} />
+          <PhotoAttachments
+            label="Item photos"
+            value={photos}
+            onChange={(uris) => handlePhotoChange('item', uris)}
+          />
+          <PhotoAttachments
+            label="Receipts"
+            value={receiptPhotos}
+            onChange={(uris) => handlePhotoChange('item_receipt', uris)}
+          />
           <PhotoAttachments
             label="Warranties"
             value={warrantyPhotos}
-            onChange={setWarrantyPhotos}
+            onChange={(uris) => handlePhotoChange('item_warranty', uris)}
           />
 
           <View style={styles.actionsRow}>

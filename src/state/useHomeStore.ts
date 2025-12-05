@@ -6,7 +6,7 @@ import { Home, HomeItem, Task, defaultHome, demoItems, demoTasks } from '../type
 import { ChangeRecord } from '../types/sync';
 import { ThemeName } from '../theme/theme';
 
-type HomeState = {
+export type HomeState = {
   homes: Home[];
   activeHomeId: string | null;
   tasks: Task[];
@@ -33,6 +33,12 @@ type HomeState = {
   setRegion: (region: string) => void;
   toggleNotifications: () => void;
   toggleTheme: () => void;
+};
+
+export type SearchResults = {
+  tasks: Task[];
+  items: HomeItem[];
+  homes: Home[];
 };
 
 const persistState = async (
@@ -556,3 +562,47 @@ export const useHomeStore = create<HomeState>((set, get) => ({
     });
   },
 }));
+
+const normalize = (value?: string) => value?.toLowerCase() ?? '';
+
+const matchesQuery = (value: string | undefined, query: string) => {
+  if (!value) return false;
+  return normalize(value).includes(query);
+};
+
+export const searchEntities = (
+  query: string,
+  options: { inAllHomes?: boolean },
+  state: Pick<HomeState, 'tasks' | 'items' | 'homes' | 'activeHomeId'>,
+): SearchResults => {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return { tasks: [], items: [], homes: [] };
+  }
+
+  const resolvedHomeId = options.inAllHomes
+    ? undefined
+    : state.activeHomeId ?? state.homes[0]?.id ?? defaultHome.id;
+
+  const tasks = state.tasks.filter((task) => {
+    if (resolvedHomeId && task.homeId !== resolvedHomeId) return false;
+
+    const dueDateFormatted = task.dueDate ? dayjs(task.dueDate).format('MMM D, YYYY') : undefined;
+    return [task.name, task.frequency, task.room, dueDateFormatted].some((field) =>
+      matchesQuery(field, normalizedQuery),
+    );
+  });
+
+  const items = state.items.filter((item) => {
+    if (resolvedHomeId && item.homeId !== resolvedHomeId) return false;
+
+    return [item.name, item.model, item.serialNumber, item.room, item.notes].some((field) =>
+      matchesQuery(field, normalizedQuery),
+    );
+  });
+
+  const homes = state.homes.filter((home) => matchesQuery(home.name, normalizedQuery));
+
+  return { tasks, items, homes };
+};

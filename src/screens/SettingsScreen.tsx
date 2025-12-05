@@ -21,6 +21,9 @@ const SettingsScreen: React.FC = () => {
     setActiveHome,
     tasks,
     items,
+    notificationStatus,
+    notificationError,
+    checkNotificationPermissions,
   } = useHomeStore();
   const { colors, themeName, toggleTheme } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -213,6 +216,16 @@ const SettingsScreen: React.FC = () => {
             </View>
             <Switch value={notificationsEnabled} onValueChange={toggleNotifications} />
           </View>
+          <Text style={styles.value}>
+            Permission: {notificationStatus === 'undetermined' ? 'Not requested' : notificationStatus}
+          </Text>
+          {notificationError && <Text style={[styles.value, styles.errorText]}>{notificationError}</Text>}
+          <Pressable
+            style={[styles.secondaryButton, styles.seasonButton]}
+            onPress={checkNotificationPermissions}
+          >
+            <Text style={styles.secondaryText}>Refresh permission status</Text>
+          </Pressable>
         </View>
 
         <View style={styles.card}>
@@ -465,6 +478,10 @@ const createStyles = (colors: ThemeColors) =>
     },
     createText: {
       color: colors.white,
+    },
+    errorText: {
+      color: '#b91c1c',
+      marginTop: spacing.xs,
     },
   });
 

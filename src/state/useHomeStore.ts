@@ -5,6 +5,17 @@ import { trackItemChange, trackTaskChange, runLocalSync } from './syncService';
 import { Home, HomeItem, Task, defaultHome, demoItems, demoTasks } from '../types/models';
 import { ChangeRecord } from '../types/sync';
 import { ThemeName } from '../theme/theme';
+import * as Notifications from 'expo-notifications';
+import {
+  DEFAULT_SCHEDULED_NOTIFICATIONS,
+  ScheduledNotifications,
+  cancelNotifications,
+  getPermissionStatus,
+  initializeNotificationChannels,
+  requestPermission,
+  scheduleTaskReminder,
+  scheduleWeeklySummary,
+} from '../notifications/notificationService';
 
 export type HomeState = {
   homes: Home[];
@@ -12,6 +23,9 @@ export type HomeState = {
   tasks: Task[];
   items: HomeItem[];
   notificationsEnabled: boolean;
+  scheduledNotifications: ScheduledNotifications;
+  notificationStatus: Notifications.PermissionStatus | 'undetermined';
+  notificationError: string | null;
   isHydrated: boolean;
   region: string;
   theme: ThemeName;
@@ -31,8 +45,10 @@ export type HomeState = {
   bulkAddRecommendedTasks: () => number;
   addSeasonalChecklists: () => number;
   setRegion: (region: string) => void;
-  toggleNotifications: () => void;
+  toggleNotifications: () => Promise<void>;
   toggleTheme: () => void;
+  refreshNotifications: () => Promise<void>;
+  checkNotificationPermissions: () => Promise<void>;
 };
 
 export type SearchResults = {
@@ -49,6 +65,8 @@ const persistState = async (
   region: string,
   theme: ThemeName,
   pendingSync: ChangeRecord[],
+  notificationsEnabled: boolean,
+  scheduledNotifications: ScheduledNotifications,
 ) => {
   const hydratedHomes = ensureHomePresence(homes);
   const resolvedActiveHome = activeHomeId ?? hydratedHomes[0]?.id ?? defaultHome.id;
@@ -60,6 +78,8 @@ const persistState = async (
     region,
     theme,
     pendingSync,
+    notificationsEnabled,
+    scheduledNotifications,
   });
 };
 
@@ -84,12 +104,118 @@ const getNextDueDate = (task: Task): string | undefined => {
   }
 };
 
-export const useHomeStore = create<HomeState>((set, get) => ({
+export const useHomeStore = create<HomeState>((set, get) => {
+  const refreshNotifications = async () => {
+    const state = get();
+
+    if (!state.notificationsEnabled) {
+      set((current) => ({
+        ...current,
+        scheduledNotifications: DEFAULT_SCHEDULED_NOTIFICATIONS,
+      }));
+      await persistState(
+        state.homes,
+        state.activeHomeId,
+        state.tasks,
+        state.items,
+        state.region,
+        state.theme,
+        state.pendingSync,
+        false,
+        DEFAULT_SCHEDULED_NOTIFICATIONS,
+      );
+      return;
+    }
+
+    await initializeNotificationChannels();
+
+    await cancelNotifications([
+      ...Object.values(state.scheduledNotifications.tasks),
+      state.scheduledNotifications.weeklySummaryId,
+    ]);
+
+    const taskNotificationMap: Record<string, string> = {};
+    for (const task of state.tasks.filter((entry) => entry.dueDate && !entry.isCompleted)) {
+      const identifier = await scheduleTaskReminder(task);
+      if (identifier) taskNotificationMap[task.id] = identifier;
+    }
+
+    const weeklySummaryId = await scheduleWeeklySummary(state.tasks);
+    const updatedScheduled: ScheduledNotifications = {
+      tasks: taskNotificationMap,
+      weeklySummaryId,
+    };
+
+    set((current) => ({
+      ...current,
+      scheduledNotifications: updatedScheduled,
+    }));
+
+    const latest = get();
+    await persistState(
+      latest.homes,
+      latest.activeHomeId,
+      latest.tasks,
+      latest.items,
+      latest.region,
+      latest.theme,
+      latest.pendingSync,
+      latest.notificationsEnabled,
+      updatedScheduled,
+    );
+  };
+
+  const checkNotificationPermissions = async () => {
+    const status = await getPermissionStatus();
+    const current = get();
+
+    if (status !== 'granted' && current.notificationsEnabled) {
+      await cancelNotifications([
+        ...Object.values(current.scheduledNotifications.tasks),
+        current.scheduledNotifications.weeklySummaryId,
+      ]);
+      const disabledState: ScheduledNotifications = {
+        tasks: {},
+        weeklySummaryId: null,
+      };
+      set((state) => ({
+        ...state,
+        notificationsEnabled: false,
+        scheduledNotifications: disabledState,
+        notificationStatus: status,
+        notificationError: 'Notifications are disabled in system settings.',
+      }));
+      const latest = get();
+      await persistState(
+        latest.homes,
+        latest.activeHomeId,
+        latest.tasks,
+        latest.items,
+        latest.region,
+        latest.theme,
+        latest.pendingSync,
+        false,
+        disabledState,
+      );
+      return;
+    }
+
+    set((state) => ({
+      ...state,
+      notificationStatus: status,
+      notificationError: status === 'granted' ? null : state.notificationError,
+    }));
+  };
+
+  return {
   homes: [],
   activeHomeId: null,
   tasks: [],
   items: [],
   notificationsEnabled: false,
+  scheduledNotifications: DEFAULT_SCHEDULED_NOTIFICATIONS,
+  notificationStatus: 'undetermined',
+  notificationError: null,
   region: 'United States',
   theme: 'light',
   isHydrated: false,
@@ -127,6 +253,10 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         region: data.region ?? 'United States',
         theme: data.theme ?? 'light',
         pendingSync: synced.pendingSync,
+        notificationsEnabled: data.notificationsEnabled ?? false,
+        scheduledNotifications: data.scheduledNotifications ?? DEFAULT_SCHEDULED_NOTIFICATIONS,
+        notificationStatus: 'undetermined',
+        notificationError: null,
         isHydrated: true,
       });
       void persistState(
@@ -137,6 +267,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         data.region ?? 'United States',
         data.theme ?? 'light',
         synced.pendingSync,
+        data.notificationsEnabled ?? false,
+        data.scheduledNotifications ?? DEFAULT_SCHEDULED_NOTIFICATIONS,
       );
       // Future backend sync: this is the hydration entry point to fan out to Azure.
       return;
@@ -148,13 +280,28 @@ export const useHomeStore = create<HomeState>((set, get) => ({
       activeHomeId: seedHome.id,
       tasks: demoTasks,
       items: demoItems,
+      notificationsEnabled: false,
+      scheduledNotifications: DEFAULT_SCHEDULED_NOTIFICATIONS,
+      notificationStatus: 'undetermined',
+      notificationError: null,
       region: 'United States',
       theme: 'light',
       pendingSync: [],
       isHydrated: true,
     });
-    await persistState([seedHome], seedHome.id, demoTasks, demoItems, 'United States', 'light', []);
+    await persistState(
+      [seedHome],
+      seedHome.id,
+      demoTasks,
+      demoItems,
+      'United States',
+      'light',
+      [],
+      false,
+      DEFAULT_SCHEDULED_NOTIFICATIONS,
+    );
   },
+  checkNotificationPermissions,
   createHome: (name) => {
     const now = new Date().toISOString();
     const newHome: Home = {
@@ -173,6 +320,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         state.pendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, homes, activeHomeId: newHome.id, pendingSync: state.pendingSync };
     });
@@ -198,6 +347,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         synced.pendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, activeHomeId: homeId, tasks: synced.tasks, items: synced.items, pendingSync: synced.pendingSync };
     });
@@ -215,6 +366,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         state.pendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, homes, pendingSync: state.pendingSync };
     });
@@ -235,6 +388,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         updatedPendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return {
         ...state,
@@ -244,6 +399,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         pendingSync: updatedPendingSync,
       };
     });
+    void refreshNotifications();
   },
   updateTask: (id, updates) => {
     set((state) => {
@@ -260,9 +416,12 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         updatedPendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, tasks: updatedTasks, pendingSync: updatedPendingSync };
     });
+    void refreshNotifications();
   },
   toggleTaskCompleted: (id) => {
     set((state) => {
@@ -304,9 +463,12 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         updatedPendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, tasks: updatedTasks, pendingSync: updatedPendingSync };
     });
+    void refreshNotifications();
   },
   removeTask: (id) => {
     set((state) => {
@@ -323,9 +485,12 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         updatedPendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, tasks: updatedTasks, pendingSync: updatedPendingSync };
     });
+    void refreshNotifications();
   },
   addItem: (item) => {
     set((state) => {
@@ -343,6 +508,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         updatedPendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return {
         ...state,
@@ -368,6 +535,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         updatedPendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, items: updatedItems, pendingSync: updatedPendingSync };
     });
@@ -387,6 +556,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         updatedPendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, items: updatedItems, pendingSync: updatedPendingSync };
     });
@@ -402,8 +573,23 @@ export const useHomeStore = create<HomeState>((set, get) => ({
       region: 'United States',
       theme: 'light',
       pendingSync: [],
+      notificationsEnabled: false,
+      scheduledNotifications: DEFAULT_SCHEDULED_NOTIFICATIONS,
+      notificationStatus: 'undetermined',
+      notificationError: null,
     });
-    await persistState([seededHome], seededHome.id, demoTasks, demoItems, 'United States', 'light', []);
+    await persistState(
+      [seededHome],
+      seededHome.id,
+      demoTasks,
+      demoItems,
+      'United States',
+      'light',
+      [],
+      false,
+      DEFAULT_SCHEDULED_NOTIFICATIONS,
+    );
+    await refreshNotifications();
   },
   bulkAddRecommendedTasks: () => {
     const recommended = [
@@ -447,6 +633,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         state.pendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return {
         ...state,
@@ -455,6 +643,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         pendingSync: state.pendingSync,
       };
     });
+    void refreshNotifications();
     return newTasks.length;
   },
   addSeasonalChecklists: () => {
@@ -519,6 +708,8 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         state.theme,
         state.pendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return {
         ...state,
@@ -527,6 +718,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         pendingSync: state.pendingSync,
       };
     });
+    void refreshNotifications();
     return added;
   },
   setRegion: (region) => {
@@ -539,12 +731,74 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         region,
         state.theme,
         state.pendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, region, pendingSync: state.pendingSync };
     });
   },
-  toggleNotifications: () => {
-    set((state) => ({ ...state, notificationsEnabled: !state.notificationsEnabled }));
+  toggleNotifications: async () => {
+    const state = get();
+
+    if (state.notificationsEnabled) {
+      await cancelNotifications([
+        ...Object.values(state.scheduledNotifications.tasks),
+        state.scheduledNotifications.weeklySummaryId,
+      ]);
+      set((current) => ({
+        ...current,
+        notificationsEnabled: false,
+        scheduledNotifications: DEFAULT_SCHEDULED_NOTIFICATIONS,
+        notificationError: null,
+      }));
+      const latest = get();
+      await persistState(
+        latest.homes,
+        latest.activeHomeId,
+        latest.tasks,
+        latest.items,
+        latest.region,
+        latest.theme,
+        latest.pendingSync,
+        false,
+        DEFAULT_SCHEDULED_NOTIFICATIONS,
+      );
+      return;
+    }
+
+    const initialStatus = await getPermissionStatus();
+    const resolvedStatus =
+      initialStatus === 'granted' ? initialStatus : await requestPermission();
+
+    if (resolvedStatus !== 'granted') {
+      set((current) => ({
+        ...current,
+        notificationsEnabled: false,
+        notificationStatus: resolvedStatus,
+        notificationError: 'Notifications are disabled in system settings.',
+      }));
+      const latest = get();
+      await persistState(
+        latest.homes,
+        latest.activeHomeId,
+        latest.tasks,
+        latest.items,
+        latest.region,
+        latest.theme,
+        latest.pendingSync,
+        false,
+        DEFAULT_SCHEDULED_NOTIFICATIONS,
+      );
+      return;
+    }
+
+    set((current) => ({
+      ...current,
+      notificationsEnabled: true,
+      notificationStatus: resolvedStatus,
+      notificationError: null,
+    }));
+    await refreshNotifications();
   },
   toggleTheme: () => {
     set((state) => {
@@ -557,11 +811,15 @@ export const useHomeStore = create<HomeState>((set, get) => ({
         state.region,
         theme,
         state.pendingSync,
+        state.notificationsEnabled,
+        state.scheduledNotifications,
       );
       return { ...state, theme, pendingSync: state.pendingSync };
     });
   },
-}));
+  refreshNotifications,
+  };
+});
 
 const normalize = (value?: string) => value?.toLowerCase() ?? '';
 

@@ -8,12 +8,20 @@ import { useHomeStore } from './src/state/useHomeStore';
 import { ThemeProvider, useAppTheme } from './src/theme/ThemeProvider';
 
 const AppContent = () => {
-  const { isHydrated, loadFromStorage } = useHomeStore();
+  const { isHydrated, loadFromStorage, notificationsEnabled, refreshNotifications, checkNotificationPermissions } =
+    useHomeStore();
   const { colors } = useAppTheme();
 
   useEffect(() => {
     loadFromStorage();
-  }, [loadFromStorage]);
+    void checkNotificationPermissions();
+  }, [loadFromStorage, checkNotificationPermissions]);
+
+  useEffect(() => {
+    if (isHydrated && notificationsEnabled) {
+      void refreshNotifications();
+    }
+  }, [isHydrated, notificationsEnabled, refreshNotifications]);
 
   if (!isHydrated) {
     return (
